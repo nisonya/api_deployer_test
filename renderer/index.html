@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Управление сервером</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
+    input, button { margin: 10px; padding: 8px; font-size: 16px; }
+    #status { margin-top: 20px; color: green; }
+    #error { color: red; }
+  </style>
+</head>
+<body>
+  <h2>Запуск HTTP-сервера</h2>
+  
+  <label>Порт: <input type="number" id="port" value="3000" min="1024" max="65535"></label><br>
+  
+  <button id="startBtn">Запустить сервер</button>
+  <button id="stopBtn" disabled>Выключить</button>
+  
+  <div id="status"></div>
+  <div id="error"></div>
+
+  <script>
+    const portInput = document.getElementById('port');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const statusDiv = document.getElementById('status');
+    const errorDiv = document.getElementById('error');
+
+    async function updateButtons() {
+      const { running } = await window.electronAPI.getServerStatus();
+      startBtn.disabled = running;
+      stopBtn.disabled = !running;
+      statusDiv.textContent = running ? `Сервер работает на порту ${portInput.value}` : '';
+    }
+
+    startBtn.onclick = async () => {
+      errorDiv.textContent = '';
+      const port = parseInt(portInput.value);
+      if (isNaN(port)) return errorDiv.textContent = 'Введите корректный порт';
+      
+      const result = await window.electronAPI.startServer(port);
+      if (result.success) {S
+        statusDiv.textContent = result.message;
+      } else {
+        errorDiv.textContent = result.message;
+      }
+      updateButtons();
+    };
+
+    stopBtn.onclick = async () => {
+      errorDiv.textContent = '';
+      const result = await window.electronAPI.stopServer();
+      if (result.success) {
+        statusDiv.textContent = result.message;
+      }
+      updateButtons();
+    };
+
+    // Инициализация при загрузке
+    updateButtons();
+  </script>
+</body>
+</html>

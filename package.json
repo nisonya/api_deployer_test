@@ -1,0 +1,70 @@
+{
+  "name": "kvan_server",
+  "version": "1.0.0",
+  "description": "app for api and db deploy",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "build:all": "electron-builder --win --linux",
+    "build": "electron-builder",
+    "test": "jest"
+  },
+  "build": {
+    "appId": "com.yourcompany.yourapp",
+    "productName": "KVANT_API",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "e"
+  },
+  "keywords": [
+    "e"
+  ],
+  "author": "e",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/jest": "^30.0.0",
+    "@types/supertest": "^6.0.3",
+    "cookie-parser": "^1.4.7",
+    "electron": "^28.0.0",
+    "electron-builder": "^26.0.12",
+    "express": "^5.2.1",
+    "jest": "^30.2.0",
+    "joi": "^18.0.2",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.16.0",
+    "playwright": "^1.57.0",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.4.6"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "request": "^2.88.2"
+  }
+}
