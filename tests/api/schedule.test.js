@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require('./setup');
+const app = require('../setup');
 
 describe('Shedule API', () => {
   test('GET /api/schedule/ — возвращает данные', async () => {

@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require('./setup');
+const app = require('../setup');
 
 describe('Employees API', () => {
   test('GET /api/employees/ — возвращает данные', async () => {
