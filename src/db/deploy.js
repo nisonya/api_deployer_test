@@ -1,13 +1,14 @@
 const fs = require('fs').promises;
 const path = require('path');
-const pool = require('./connection');
+const { getPool } = require('./connection');
 
 async function deploy() {
+  const pool = await getPool();
   const conn = await pool.getConnection();
   try {
     const [rows] = await conn.query(
       `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES 
-       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users'`,
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'attendance'`,
       [process.env.DB_NAME]
     );
 
