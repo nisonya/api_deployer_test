@@ -1,0 +1,163 @@
+:root {
+  --bg: #f5f0eb;
+  --card: #ffffff;
+  --accent: #003087;
+  --accent-green: #4caf50;
+  --text: #333;
+  --gray: #777;
+}
+
+* {
+  box-sizing: border-box;
+}
+@font-face {
+  font-family: 'Bank Gothic Russ';
+  src: url('../fonts/BankGothicRuss.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.container {
+  background: var(--card);
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0,0,0,.1);
+  padding: 60px 40px;
+  text-align: center;
+  width: 480px;
+  max-width: 90vw;
+}
+
+h1 {
+  font-family: 'Bank Gothic Russ', 'Orbitron', sans-serif; /* fallback на Orbitron или system */
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: var(--accent);     /* теперь тёмно-синий */
+  margin: 0 0 40px;
+  letter-spacing: 3px;
+}
+
+/* Остальной код switch и кнопки — без изменений */
+.status {
+  font-size: 1.4rem;
+  color: var(--gray);
+  margin: 20px 0;
+}
+
+.address {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--text);
+  margin: 10px 0 40px;
+}
+/* Кастомный switch по референсу */
+.switch-container {
+  margin: 40px 0;
+}
+
+.custom-switch {
+  position: relative;
+  display: inline-block;
+  width: 120px;
+  height: 60px;
+}
+
+.custom-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #ccc;
+  border-radius: 60px;
+  transition: .4s;
+}
+
+.switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 52px;
+  width: 52px;
+  left: 4px;
+  bottom: 4px;
+  background: white;
+  border-radius: 50%;
+  transition: .4s;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+
+.switch-label-text {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: bold;
+  font-size: 1.1rem;
+  transition: .4s;
+}
+
+.off-text {
+  left: 20px;
+  color: white;
+}
+
+.on-text {
+  right: 20px;
+  color: white;
+  opacity: 0;
+}
+
+/* ON состояние */
+input:checked + .switch-slider {
+  background: var(--accent-green);
+}
+
+input:checked + .switch-slider:before {
+  transform: translateX(60px);
+}
+
+input:checked ~ .on-text {
+  opacity: 1;
+}
+
+input:checked ~ .off-text {
+  opacity: 0;
+}
+
+/* Шестерёнка настроек */
+.settings-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 12px;
+  margin-top: 20px;
+}
+
+.gear-icon {
+  width: 40px;
+  height: 40px;
+  fill: var(--gray);
+  transition: .3s;
+}
+
+.settings-btn:hover .gear-icon {
+  fill: var(--accent-orange);
+  transform: rotate(30deg);
+}
