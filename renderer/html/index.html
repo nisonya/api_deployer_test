@@ -35,7 +35,7 @@
       statusDiv.textContent = running ? `Сервер работает на порту ${portInput.value}` : '';
     }
 
-    startBtn.onclick = async () => {
+    /*startBtn.onclick = async () => {
       errorDiv.textContent = '';
       const port = parseInt(portInput.value);
       if (isNaN(port)) return errorDiv.textContent = 'Введите корректный порт';
@@ -56,7 +56,15 @@
         statusDiv.textContent = result.message;
       }
       updateButtons();
-    };
+    };*/
+    document.getElementById('startBtn').addEventListener('click', async () => {
+  const res = await window.electronAPI.startApi();
+  console.log(res.message);
+});
+
+document.getElementById('stopBtn').addEventListener('click', async () => {
+  await window.electronAPI.stopApi();
+});
 
     // Инициализация при загрузке
     updateButtons();
