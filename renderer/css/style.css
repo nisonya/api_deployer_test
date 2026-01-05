@@ -1,7 +1,7 @@
 :root {
   --bg: #f5f0eb;
   --card: #ffffff;
-  --accent: #003087;
+  --accent: #003087;        /* тёмно-синий */
   --accent-green: #4caf50;
   --text: #333;
   --gray: #777;
@@ -10,6 +10,7 @@
 * {
   box-sizing: border-box;
 }
+
 @font-face {
   font-family: 'Bank Gothic Russ';
   src: url('../fonts/BankGothicRuss.ttf') format('truetype');
@@ -17,41 +18,46 @@
   font-style: normal;
 }
 
-* {
-  box-sizing: border-box;
-}
-
 body {
   margin: 0;
   font-family: system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;      /* контент сверху */
   justify-content: center;
+  padding: 40px 20px;           /* отступы от краёв окна */
+  overflow-y: auto;             /* скролл всего окна */
 }
 
 .container {
   background: var(--card);
   border-radius: 20px;
   box-shadow: 0 20px 40px rgba(0,0,0,.1);
-  padding: 60px 40px;
+  padding: 50px 40px;
   text-align: center;
-  width: 480px;
-  max-width: 90vw;
+  width: 500px;
+  max-width: 95vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 h1 {
-  font-family: 'Bank Gothic Russ', 'Orbitron', sans-serif; /* fallback на Orbitron или system */
-  font-size: 3.5rem;
+  font-family: 'Bank Gothic Russ', 'Orbitron', sans-serif;
+  font-size: 3rem;
   font-weight: 800;
-  color: var(--accent);     /* теперь тёмно-синий */
+  color: var(--accent);
   margin: 0 0 40px;
   letter-spacing: 3px;
 }
+.setup-container h1 {
+  font-size: 2.4rem;           /* с 3rem → меньше */
+  margin-bottom: 30px;         /* с 40px */
+}
 
-/* Остальной код switch и кнопки — без изменений */
+/* Main window */
 .status {
   font-size: 1.4rem;
   color: var(--gray);
@@ -64,7 +70,8 @@ h1 {
   color: var(--text);
   margin: 10px 0 40px;
 }
-/* Кастомный switch по референсу */
+
+/* Switch */
 .switch-container {
   margin: 40px 0;
 }
@@ -111,20 +118,18 @@ h1 {
   font-weight: bold;
   font-size: 1.1rem;
   transition: .4s;
+  color: white;
 }
 
 .off-text {
   left: 20px;
-  color: white;
 }
 
 .on-text {
   right: 20px;
-  color: white;
   opacity: 0;
 }
 
-/* ON состояние */
 input:checked + .switch-slider {
   background: var(--accent-green);
 }
@@ -141,13 +146,13 @@ input:checked ~ .off-text {
   opacity: 0;
 }
 
-/* Шестерёнка настроек */
+/* Шестерёнка */
 .settings-btn {
   background: none;
   border: none;
   cursor: pointer;
   padding: 12px;
-  margin-top: 20px;
+  margin-top: 30px;
 }
 
 .gear-icon {
@@ -158,6 +163,92 @@ input:checked ~ .off-text {
 }
 
 .settings-btn:hover .gear-icon {
-  fill: var(--accent-orange);
+  fill: var(--accent);
   transform: rotate(30deg);
+}
+
+/* Форма db-setup */
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;                   /* твой выбор */
+  margin-top: 10px;
+  width: 100%;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.form-group label {
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+.form-group input {
+  padding: 12px 14px;
+  font-size: 1rem;
+  background: #f8f8f8;
+  border: none;
+  border-radius: 12px;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.05);
+  transition: .2s;
+}
+
+.form-group input:focus {
+  outline: none;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 48, 135, 0.2);
+}
+
+.message {
+  min-height: 24px;
+  font-weight: bold;
+  font-size: 1rem;
+  margin: 15px 0;
+}
+
+/* Кнопки */
+.button {
+  background: var(--accent-green);
+  color: white;
+  border: none;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: .3s;
+  margin: 10px 0;
+}
+
+.button:hover:not(:disabled) {
+  background: #388e3c;
+  transform: translateY(-2px);
+}
+
+.button:disabled {
+  background: #ccc;
+  color: #666;
+  cursor: not-allowed;
+}
+
+#saveBtn {
+  background: var(--accent);
+}
+
+#saveBtn:hover:not(:disabled) {
+  background: #002055;
+}
+
+#testBtn {
+  background: #666;
+}
+
+#testBtn:hover {
+  background: #555;
 }
