@@ -5,5 +5,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   stopApi: () => ipcRenderer.invoke('stop-api'),
   getApiStatus: () => ipcRenderer.invoke('get-api-status'),
   saveDBConfig: () => ipcRenderer.invoke('save-db-config'),
-  testDBConnection: () => ipcRenderer.invoke('test-db-connection')
+  testDBConnection: () => ipcRenderer.invoke('test-db-connection'),
+  openDbSetup: () => ipcRenderer.send('open-db-setup') // новый канал
 });

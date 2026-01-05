@@ -19,13 +19,13 @@ function createMainWindow() {
     }
   });
 
-  mainWindow.loadFile('renderer/index.html');
+  mainWindow.loadFile('renderer/html/main_window.html');
 }
 
 function createSetupWindow() {
   setupWindow = new BrowserWindow({
     width: 600,
-    height: 600,
+    height: 1200,
     parent: mainWindow || null,
     modal: true,
     resizable: false,
@@ -36,7 +36,7 @@ function createSetupWindow() {
     }
   });
 
-  setupWindow.loadFile('renderer/db-setup.html');
+  setupWindow.loadFile('renderer/html/db_setup.html');
 
   setupWindow.on('closed', () => {
     setupWindow = null;
@@ -53,7 +53,7 @@ app.whenReady().then(async () => {
   createMainWindow();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
   });
 });
 
@@ -99,4 +99,8 @@ ipcMain.handle('save-db-config', async (event, config) => {
   require('./src/common/config').setDbConfig(config);
   app.relaunch();
   app.exit();
+});
+
+ipcMain.on('open-db-setup', () => {
+  createSetupWindow();
 });
