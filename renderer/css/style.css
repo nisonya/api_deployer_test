@@ -171,7 +171,7 @@ input:checked ~ .off-text {
 form {
   display: flex;
   flex-direction: column;
-  gap: 8px;                   /* твой выбор */
+  gap: 6px;                   /* твой выбор */
   margin-top: 10px;
   width: 100%;
 }
@@ -251,4 +251,17 @@ form {
 
 #testBtn:hover {
   background: #555;
+}
+.clickable-header {
+  color: var(--accent);              /* тёмно-синий */
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color .2s;
+  display: inline-block;             /* для нормального underline */
+  margin: 20px 0;
+}
+
+.clickable-header:hover {
+  color: #002055;                    /* темнее на hover */
+  text-decoration-thickness: 2px;
 }
