@@ -2,7 +2,7 @@ const statusEl = document.getElementById('status');
 const addressEl = document.getElementById('address');
 const switchEl = document.getElementById('serverSwitch');
 const settingsBtn = document.getElementById('settingsBtn');
-
+const backUpBtn = document.getElementById('backupHeader');
 async function updateStatus() {
   const res = await window.electronAPI.getApiStatus();
   if (res.running) {
@@ -29,7 +29,9 @@ switchEl.addEventListener('change', async () => {
     updateStatus();
   }
 });
-
+backUpBtn.addEventListener('click', () => {
+  window.electronAPI.openBackupModal(); 
+});
 
 settingsBtn.addEventListener('click', () => {
   window.electronAPI.openDbSetup();
@@ -37,3 +39,5 @@ settingsBtn.addEventListener('click', () => {
 
 updateStatus(); // при загрузке
 setInterval(updateStatus, 5000); // автообновление
+
+console.log('JS загружен, слушатели добавлены');

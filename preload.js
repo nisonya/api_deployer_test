@@ -4,7 +4,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startApi: () => ipcRenderer.invoke('start-api'),
   stopApi: () => ipcRenderer.invoke('stop-api'),
   getApiStatus: () => ipcRenderer.invoke('get-api-status'),
-  saveDBConfig: () => ipcRenderer.invoke('save-db-config'),
-  testDBConnection: () => ipcRenderer.invoke('test-db-connection'),
-  openDbSetup: () => ipcRenderer.send('open-db-setup') // новый канал
+  testDBConnection: (config) => ipcRenderer.invoke('test-db-connection', config),
+  saveDBConfig: (config) => ipcRenderer.invoke('save-db-config', config),
+  openDbSetup: () => ipcRenderer.send('open-db-setup'),
+  openBackupModal: ()=> ipcRenderer.send('open-backup'),
+  exportSeed: () => ipcRenderer.invoke('export-seed'),
+  importSeed: () => ipcRenderer.invoke('import-seed')
 });
