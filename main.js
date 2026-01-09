@@ -41,7 +41,7 @@ function createSetupWindow() {
   });
 
   setupWindow.loadFile('renderer/html/db_setup.html');
-  console.log('Загрузка db_setup.html');
+  setupWindow.removeMenu();
   setupWindow.on('closed', () => {
     setupWindow = null;
     if (!isConfigured()) app.quit(); // если закрыли без сохранения — выход
@@ -114,17 +114,22 @@ ipcMain.handle('get-api-status', () => ({ running: !!apiServer }));
 ipcMain.handle('test-db-connection', async (event, config) => {
   try {
     const mysql = require('mysql2/promise');
-    const testPool = mysql.createPool(config);
+    const testPool = mysql.createPool({
+      host: config.host,
+      port: config.port,
+      user: config.user,
+      password: config.password
+    });
     await testPool.query('SELECT 1');
     await testPool.end();
     console.log("sucking seed");
     return { success: true };
   } catch (err) {
-    console.log("oposite of sucking seed");let userMessage = 'Не удалось подключиться. Проверьте данные.';
+    console.log("oposite of sucking seed");
+    let userMessage = 'Не удалось подключиться. Проверьте данные.';
     if (err.code === 'ECONNREFUSED') userMessage = 'Сервер БД не запущен или порт неверный.';
     if (err.code === 'ER_ACCESS_DENIED_ERROR') userMessage = 'Неверный пользователь или пароль.';
     if (err.code === 'ER_DBACCESS_DENIED_ERROR') userMessage = 'Нет доступа к БД.';
-    console.error('Ошибка подключения:', err);
     return { success: false, message: userMessage };
     }
 });

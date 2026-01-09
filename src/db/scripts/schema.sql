@@ -1,8 +1,8 @@
-CREATE DATABASE  IF NOT EXISTS `kvantorium_schemas` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
-USE `kvantorium_schemas`;
+CREATE DATABASE  IF NOT EXISTS `kvant` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+USE `kvant`;
 -- MySQL dump 10.13  Distrib 8.0.36, for Win64 (x86_64)
 --
--- Host: 127.0.0.1    Database: kvantorium_schemas
+-- Host: 127.0.0.1    Database: kvant
 -- ------------------------------------------------------
 -- Server version	8.0.36
 
@@ -172,8 +172,8 @@ DELIMITER ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `employees_BEFORE_DELETE` BEFORE DELETE ON `employees` FOR EACH ROW BEGIN
 SET SQL_SAFE_UPDATES = 0;
-	DELETE FROM `kvantorium_schemas`.`profile` WHERE `employee_id` = OLD.id_employees;
-	DELETE FROM `kvantorium_schemas`.`kvantum_mentor` WHERE `id_mentor` = OLD.id_employees;
+	DELETE FROM `kvant`.`profile` WHERE `employee_id` = OLD.id_employees;
+	DELETE FROM `kvant`.`kvant` WHERE `id_mentor` = OLD.id_employees;
 SET SQL_SAFE_UPDATES = 1;
 END */;;
 DELIMITER ;
@@ -292,7 +292,7 @@ DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `event_plan_organization_BEFORE_UPDATE` BEFORE UPDATE ON `event_plan_organization` FOR EACH ROW BEGIN
 SET SQL_SAFE_UPDATES = 0;
 if(DATE(old.dates_of_event)!=DATE(new.dates_of_event)) THEN BEGIN
-	DELETE FROM `kvantorium_schemas`.`rent` WHERE `id_event` = OLD.id;
+	DELETE FROM `kvant`.`rent` WHERE `id_event` = OLD.id;
 END; END IF;
 SET SQL_SAFE_UPDATES = 1;
 END */;;
@@ -312,8 +312,8 @@ DELIMITER ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `event_plan_organization_BEFORE_DELETE` BEFORE DELETE ON `event_plan_organization` FOR EACH ROW BEGIN
 SET SQL_SAFE_UPDATES = 0;
-	DELETE FROM `kvantorium_schemas`.`responsible_for_org_events` WHERE `id_event` = OLD.id;
-	DELETE FROM `kvantorium_schemas`.`rent` WHERE `id_event` = OLD.id;
+	DELETE FROM `kvant`.`responsible_for_org_events` WHERE `id_event` = OLD.id;
+	DELETE FROM `kvant`.`rent` WHERE `id_event` = OLD.id;
 SET SQL_SAFE_UPDATES = 1;
 END */;;
 DELIMITER ;
@@ -361,7 +361,7 @@ CREATE TABLE `event_plan_participation` (
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `event_plan_participation_BEFORE_DELETE` BEFORE DELETE ON `event_plan_participation` FOR EACH ROW BEGIN
 SET SQL_SAFE_UPDATES = 0;
-	DELETE FROM `kvantorium_schemas`.`responsible_for_part_events` WHERE `id_event` = OLD.id;
+	DELETE FROM `kvant`.`responsible_for_part_events` WHERE `id_event` = OLD.id;
 SET SQL_SAFE_UPDATES = 1;
 END */;;
 DELIMITER ;
@@ -435,7 +435,7 @@ CREATE TABLE `groups` (
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `groups_BEFORE_DELETE` BEFORE DELETE ON `groups` FOR EACH ROW BEGIN
 Set SQL_SAFE_UPDATES = 0;
-delete From `kvantorium_schemas`.`students_groups` where students_groups.idGroup = Old.idGroups;
+delete From `kvant`.`students_groups` where students_groups.idGroup = Old.idGroups;
 Set SQL_SAFE_UPDATES = 1;
 END */;;
 DELIMITER ;
@@ -878,7 +878,7 @@ DELIMITER ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `students_AFTER_INSERT` AFTER INSERT ON `students` FOR EACH ROW BEGIN
 Set SQL_SAFE_UPDATES = 0;
-INSERT INTO `kvantorium_schemas`.`pixels` (`id_student`) VALUES (new.idStudent);
+INSERT INTO `kvant`.`pixels` (`id_student`) VALUES (new.idStudent);
 Set SQL_SAFE_UPDATES = 1;
 END */;;
 DELIMITER ;
@@ -919,9 +919,9 @@ DELIMITER ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `students_BEFORE_DELETE` BEFORE DELETE ON `students` FOR EACH ROW BEGIN
 Set SQL_SAFE_UPDATES = 0;
-delete From `kvantorium_schemas`.`students_groups` where students_groups.idStudent = Old.idStudent;
-delete From `kvantorium_schemas`.`participants_for_part_event` where participants_for_part_event.id_student = Old.idStudent;
-delete From `kvantorium_schemas`.`pixels` where pixels.id_student = Old.idStudent;
+delete From `kvant`.`students_groups` where students_groups.idStudent = Old.idStudent;
+delete From `kvant`.`participants_for_part_event` where participants_for_part_event.id_student = Old.idStudent;
+delete From `kvant`.`pixels` where pixels.id_student = Old.idStudent;
 Set SQL_SAFE_UPDATES = 1;
 END */;;
 DELIMITER ;
@@ -1010,7 +1010,7 @@ DELIMITER ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `tasks_BEFORE_DELETE` BEFORE DELETE ON `tasks` FOR EACH ROW BEGIN
 SET SQL_SAFE_UPDATES = 0;
-	DELETE FROM `kvantorium_schemas`.`task_employee` WHERE `id_task` = OLD.id;
+	DELETE FROM `kvant`.`task_employee` WHERE `id_task` = OLD.id;
 SET SQL_SAFE_UPDATES = 1;
 
 END */;;
@@ -1083,11 +1083,11 @@ CREATE TABLE `weekday` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping events for database 'kvantorium_schemas'
+-- Dumping events for database 'kvant'
 --
 
 --
--- Dumping routines for database 'kvantorium_schemas'
+-- Dumping routines for database 'kvant'
 --
 /*!50003 DROP PROCEDURE IF EXISTS `add_document` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
@@ -1101,7 +1101,7 @@ CREATE TABLE `weekday` (
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `add_document`(IN n VARCHAR(100), l VARCHAR(230))
 BEGIN
-	INSERT INTO `kvantorium_schemas`.`documents` (`name`, `link`) VALUES (n,l);
+	INSERT INTO `kvant`.`documents` (`name`, `link`) VALUES (n,l);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1120,9 +1120,9 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `add_employee`(in n varchar(45), s varchar(45), p varchar (45), d varchar(30), post int, c varchar(20), size varchar(10), e varchar(30), sch varchar(100), g varchar(1), kpi varchar (250), l varchar(20), pass varchar(200), id_a int)
 BEGIN
-INSERT INTO `kvantorium_schemas`.`employees` (`first_name`, `second_name`, `patronymic`, `date_of_birth`, 
+INSERT INTO `kvant`.`employees` (`first_name`, `second_name`, `patronymic`, `date_of_birth`, 
 `position`, `contact`, `size`, `education`, `schedule`, `gender`, `KPI`) VALUES (n, s, p, d, post, c, size, e, sch, g, kpi);
-INSERT INTO `kvantorium_schemas`.`profile` (`employee_id`, `login`, `password`, `access_level_id`) 
+INSERT INTO `kvant`.`profile` (`employee_id`, `login`, `password`, `access_level_id`) 
 VALUES ((SELECT LAST_INSERT_ID()), l, pass, id_a);
 END ;;
 DELIMITER ;
@@ -1142,7 +1142,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `add_resp_for_task`(IN i INT, r INT)
 BEGIN
-INSERT INTO `kvantorium_schemas`.`task_employee` (`id_task`, `id_employee`) VALUES (i, r);
+INSERT INTO `kvant`.`task_employee` (`id_task`, `id_employee`) VALUES (i, r);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1161,8 +1161,8 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `add_schedule`(in id_r int, id_g int, sT varchar(8), eT varchar(8), d int, id_e int)
 BEGIN
-INSERT INTO `kvantorium_schemas`.`schedule` (`group`, `startTime`, `endTime`, `day`) VALUES (id_g, sT, eT, d);
-INSERT INTO `kvantorium_schemas`.`employees_schedule` (`idEmployees`, `idSchedule`, `room`) 
+INSERT INTO `kvant`.`schedule` (`group`, `startTime`, `endTime`, `day`) VALUES (id_g, sT, eT, d);
+INSERT INTO `kvant`.`employees_schedule` (`idEmployees`, `idSchedule`, `room`) 
 VALUES (id_e, (SELECT LAST_INSERT_ID()), id_r);
 END ;;
 DELIMITER ;
@@ -1183,7 +1183,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `add_student`(sS varchar(40), nS varchar(30), pS varchar(35), b date, 
 n tinyint(1), sP varchar(40), nP varchar(30), pP varchar(35), e varchar(50), p varchar(18))
 BEGIN
-INSERT INTO `kvantorium_schemas`.`students` (`surnameStudent`, `nameStudent`,`patronymicStudent`, `birthdayStudent`,`navigator`, `surnameParent`,`nameParent`, `patronymicParent`,`E-mail`, `phone`) VALUES (sS, ns, ps, b, n, sP, nP, pP,e,p);
+INSERT INTO `kvant`.`students` (`surnameStudent`, `nameStudent`,`patronymicStudent`, `birthdayStudent`,`navigator`, `surnameParent`,`nameParent`, `patronymicParent`,`E-mail`, `phone`) VALUES (sS, ns, ps, b, n, sP, nP, pP,e,p);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1202,7 +1202,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `add_student_to _iv`(In i INT)
 BEGIN
-INSERT INTO `kvantorium_schemas`.`students_groups` (`idStudent`, `idGroup`) VALUES (i, '51');
+INSERT INTO `kvant`.`students_groups` (`idStudent`, `idGroup`) VALUES (i, '51');
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1222,7 +1222,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `add_student_to_group`(in i int, i_g int)
 BEGIN
 
-INSERT INTO `kvantorium_schemas`.`students_groups` (`idStudent`, `idGroup`) VALUES (i, i_g);
+INSERT INTO `kvant`.`students_groups` (`idStudent`, `idGroup`) VALUES (i, i_g);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1356,7 +1356,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `change_task_status`(IN i INT, in b TINYINT)
 BEGIN
-UPDATE `kvantorium_schemas`.`tasks` SET `done` = b WHERE (`id` = i);
+UPDATE `kvant`.`tasks` SET `done` = b WHERE (`id` = i);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1375,7 +1375,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `create_task`(IN d DATETIME, des VARCHAR(250), i INT)
 BEGIN
-INSERT INTO `kvantorium_schemas`.`tasks` (`task_deadline`, `description`, `id_creator`) VALUES (d, des, i);
+INSERT INTO `kvant`.`tasks` (`task_deadline`, `description`, `id_creator`) VALUES (d, des, i);
  SELECT LAST_INSERT_ID() as id;
 END ;;
 DELIMITER ;
@@ -1396,7 +1396,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_event_org`(IN i INT)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-DELETE FROM `kvantorium_schemas`.`event_plan_organization` WHERE (`id` = i);
+DELETE FROM `kvant`.`event_plan_organization` WHERE (`id` = i);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -1417,7 +1417,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_event_part`(IN i INT)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-DELETE FROM `kvantorium_schemas`.`event_plan_participation` WHERE (`id` = i);
+DELETE FROM `kvant`.`event_plan_participation` WHERE (`id` = i);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -1438,7 +1438,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_rent`(IN i INT)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-DELETE FROM `kvantorium_schemas`.`rent` WHERE (`id` = i);
+DELETE FROM `kvant`.`rent` WHERE (`id` = i);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -1459,7 +1459,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_responsible_org`(IN emp INT, eve INT)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-DELETE FROM `kvantorium_schemas`.`responsible_for_org_events` WHERE (`id_event` = eve) and (`id_employee` = emp);
+DELETE FROM `kvant`.`responsible_for_org_events` WHERE (`id_event` = eve) and (`id_employee` = emp);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -1480,7 +1480,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_responsible_part`(IN emp INT, eve INT)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-DELETE FROM `kvantorium_schemas`.`responsible_for_part_events` WHERE (`id_event` = eve) and (`id_employee` = emp);
+DELETE FROM `kvant`.`responsible_for_part_events` WHERE (`id_event` = eve) and (`id_employee` = emp);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -1501,7 +1501,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_schedule`(in id int )
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-DELETE FROM `kvantorium_schemas`.`schedule` WHERE (`idlesson` = id);
+DELETE FROM `kvant`.`schedule` WHERE (`idlesson` = id);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -1522,7 +1522,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_student_from_group`(in i int, i_g int)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-DELETE FROM `kvantorium_schemas`.`students_groups` WHERE idStudent = i and idGroup = i_g;
+DELETE FROM `kvant`.`students_groups` WHERE idStudent = i and idGroup = i_g;
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -1543,7 +1543,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_student_to_group`(in i int, i_g int)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-DELETE FROM `kvantorium_schemas`.`students_groups` WHERE idStudent = i and idGroup = i_g;
+DELETE FROM `kvant`.`students_groups` WHERE idStudent = i and idGroup = i_g;
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -1564,7 +1564,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_task`(IN i INT)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-DELETE FROM `kvantorium_schemas`.`tasks` WHERE (`id` = i);
+DELETE FROM `kvant`.`tasks` WHERE (`id` = i);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -1686,7 +1686,7 @@ BEGIN
 SELECT  s.surnameStudent, s.nameStudent, s.patronymicStudent, p.part_of_comp, p.make_content, p.invite_friend, p.clean_kvantum, p.filled_project_card_on_time, 
 p.finished_project_with_product, p.regional_competition, p.interregional_competition, p.all_russian_competition,
 p.international_competition, p.nto, p.become_an_engineering_volunteer, p.help_with_event, p.make_own_event, 
-p.special_achievements, p.fine FROM kvantorium_schemas.pixels p,  students s where p.id_student=s.idStudent;
+p.special_achievements, p.fine FROM kvant.pixels p,  students s where p.id_student=s.idStudent;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -2636,7 +2636,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `get_org_resp_table`()
 BEGIN
-SELECT * FROM kvantorium_schemas.responsible_for_org_events;
+SELECT * FROM kvant.responsible_for_org_events;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -2772,7 +2772,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `get_part_resp_table`()
 BEGIN
-SELECT * FROM kvantorium_schemas.responsible_for_part_events;
+SELECT * FROM kvant.responsible_for_part_events;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -3331,7 +3331,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `get_table_students_group`()
 BEGIN
-SELECT * FROM kvantorium_schemas.students_groups;
+SELECT * FROM kvant.students_groups;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -3399,7 +3399,7 @@ THEN
 	UPDATE `attendance` SET `presence` = p
         WHERE `id_student` = s AND `id_group` = g AND`date_of_lesson` = d;
 ELSE
-	INSERT INTO `kvantorium_schemas`.`attendance` (`id_student`, `id_group`, `date_of_lesson`, `presence`) VALUES (s, g, d, p);
+	INSERT INTO `kvant`.`attendance` (`id_student`, `id_group`, `date_of_lesson`, `presence`) VALUES (s, g, d, p);
 END IF;
 END ;;
 DELIMITER ;
@@ -3419,7 +3419,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `new_event_org`(IN n VARCHAR(110), foh VARCHAR(60), dates VARCHAR(110), days VARCHAR(23), aa INT, aap INT, an TEXT, r VARCHAR(110))
 BEGIN
-INSERT INTO `kvantorium_schemas`.`event_plan_organization` (`name`, `form_of_holding`, `dates_of_event`, `day_of_the_week`, `amount_of_applications`, 
+INSERT INTO `kvant`.`event_plan_organization` (`name`, `form_of_holding`, `dates_of_event`, `day_of_the_week`, `amount_of_applications`, 
 `amount_of_planning_application`, `annotation`, `result`) VALUES (n, foh, dates, days, aa, aap, an, r);
 SELECT LAST_INSERT_ID() as id;
 END ;;
@@ -3440,7 +3440,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `new_event_part`(IN n VARCHAR(110), foh INT, lvl INT, rd VARCHAR(60), p VARCHAR(210), r VARCHAR(180), a TEXT, d VARCHAR(110), l TEXT, pa INT, wa INT, rua INT)
 BEGIN
-INSERT INTO `kvantorium_schemas`.`event_plan_participation` (`name`, `form_of_holding`, `id_type`, `registration_deadline`, 
+INSERT INTO `kvant`.`event_plan_participation` (`name`, `form_of_holding`, `id_type`, `registration_deadline`, 
 `participants_and_works`, `result`, `annotation`, `dates_of_event`, `link`, `participants_amount`, `winner_amount`, `runner_up_amount`) VALUES (n, foh, lvl, rd, p, r, a, d, l, pa, wa, rua);
 SELECT LAST_INSERT_ID() as id;
 END ;;
@@ -3461,7 +3461,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `new_event_part_v3`(IN n VARCHAR(110), foh INT, lvl INT, rd VARCHAR(60), p VARCHAR(210),  a TEXT, d VARCHAR(110), l TEXT, pa INT, wa INT, rua INT)
 BEGIN
-INSERT INTO `kvantorium_schemas`.`event_plan_participation` (`name`, `form_of_holding`, `id_type`, `registration_deadline`, 
+INSERT INTO `kvant`.`event_plan_participation` (`name`, `form_of_holding`, `id_type`, `registration_deadline`, 
 `participants_and_works`, `annotation`, `dates_of_event`, `link`, `participants_amount`, `winner_amount`, `runner_up_amount`) VALUES (n, foh, lvl, rd, p, a, d, l, pa, wa, rua);
 SELECT LAST_INSERT_ID() as id;
 END ;;
@@ -3501,7 +3501,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `new_rent`(IN e INT, r INT, d DATE, st TIME, et TIME)
 BEGIN
-	INSERT INTO `kvantorium_schemas`.`rent` (`id_event`, `id_room`, `date`, `start_time`, `end_time`) VALUES (e, r, d, st, et);
+	INSERT INTO `kvant`.`rent` (`id_event`, `id_room`, `date`, `start_time`, `end_time`) VALUES (e, r, d, st, et);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -3520,7 +3520,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `new_responsible_org`(IN emp INT, eve INT)
 BEGIN
-INSERT INTO `kvantorium_schemas`.`responsible_for_org_events` (`id_employee`, `id_event`) VALUES (emp, eve);
+INSERT INTO `kvant`.`responsible_for_org_events` (`id_employee`, `id_event`) VALUES (emp, eve);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -3539,7 +3539,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `new_responsible_part`(IN emp INT, eve INT)
 BEGIN
-INSERT INTO `kvantorium_schemas`.`responsible_for_part_events` (`id_event`, `id_employee`) VALUES (eve, emp);
+INSERT INTO `kvant`.`responsible_for_part_events` (`id_event`, `id_employee`) VALUES (eve, emp);
 
 END ;;
 DELIMITER ;
@@ -3620,7 +3620,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `set_contact`(IN i INT, IN c VARCHAR(20))
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-	UPDATE `kvantorium_schemas`.`employees` SET `contact` = c WHERE (`id_employees` = i);
+	UPDATE `kvant`.`employees` SET `contact` = c WHERE (`id_employees` = i);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -3640,7 +3640,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `set_KPI_to employee`(IN i INT, k VARCHAR(250))
 BEGIN
-UPDATE `kvantorium_schemas`.`employees` SET `KPI` = k WHERE (`id_employees` = i);
+UPDATE `kvant`.`employees` SET `KPI` = k WHERE (`id_employees` = i);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -3659,7 +3659,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `set_KPI_to_employee`(IN i INT, k VARCHAR(250))
 BEGIN
-UPDATE `kvantorium_schemas`.`employees` SET `KPI` = k WHERE (`id_employees` = i);
+UPDATE `kvant`.`employees` SET `KPI` = k WHERE (`id_employees` = i);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -3679,7 +3679,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `set_size`(In i INT, s VARCHAR(20))
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-	UPDATE `kvantorium_schemas`.`employees` SET `size` = s WHERE (`id_employees` = i);
+	UPDATE `kvant`.`employees` SET `size` = s WHERE (`id_employees` = i);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -3701,7 +3701,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `update_event_org`(IN i INT, n VARCH
  aap INT, an TEXT, r VARCHAR(110))
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-UPDATE `kvantorium_schemas`.`event_plan_organization` SET `name` = n, `form_of_holding` = foh, `dates_of_event` = dates,
+UPDATE `kvant`.`event_plan_organization` SET `name` = n, `form_of_holding` = foh, `dates_of_event` = dates,
  `day_of_the_week` = days, `amount_of_applications` = aa, `amount_of_planning_application` = aap, `annotation` = an, 
  `result` = r WHERE (`id` = i);
 
@@ -3725,7 +3725,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `update_event_part`(IN i INT, n VARCHAR(110), foh INT, lvl INT, rd VARCHAR(60), p VARCHAR(210), r VARCHAR(180), a TEXT, d VARCHAR(110), l TEXT, pa INT, wa INT, rua INT)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-UPDATE `kvantorium_schemas`.`event_plan_participation` SET `name` = n, `form_of_holding` = foh, `id_type` = lvl, `registration_deadline` = rd, 
+UPDATE `kvant`.`event_plan_participation` SET `name` = n, `form_of_holding` = foh, `id_type` = lvl, `registration_deadline` = rd, 
  `participants_and_works` = p, `result` = r, `annotation` = a, `dates_of_event` = d, `link` = l, `participants_amount` = pa, `winner_amount` = wa, `runner_up_amount` = rua
  WHERE (`id` = i);
 SET SQL_SAFE_UPDATES = 1;
@@ -3748,7 +3748,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `update_event_part_new`(IN i INT, n VARCHAR(110), foh INT, lvl INT, rd VARCHAR(60), p VARCHAR(210), a TEXT, d VARCHAR(110), l TEXT, pa INT, wa INT, rua INT)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-UPDATE `kvantorium_schemas`.`event_plan_participation` SET `name` = n, `form_of_holding` = foh, `id_type` = lvl, `registration_deadline` = rd, 
+UPDATE `kvant`.`event_plan_participation` SET `name` = n, `form_of_holding` = foh, `id_type` = lvl, `registration_deadline` = rd, 
  `participants_and_works` = p, `annotation` = a, `dates_of_event` = d, `link` = l, `participants_amount` = pa, `winner_amount` = wa, `runner_up_amount` = rua
  WHERE (`id` = i);
 SET SQL_SAFE_UPDATES = 1;
@@ -3770,7 +3770,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `update_mark`(IN id_e INT, id_emp INT, m tinyint)
 BEGIN
-	UPDATE `kvantorium_schemas`.`responsible_for_part_events` SET `mark_of_sending_an_application` = m WHERE (`id_event` = id_e and `id_employee`=id_emp);
+	UPDATE `kvant`.`responsible_for_part_events` SET `mark_of_sending_an_application` = m WHERE (`id_event` = id_e and `id_employee`=id_emp);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -3790,7 +3790,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `update_pixels_for_student`(IN id INT, poc int, mc int, ifriend int, ck int, fpcot int,fpwp int, rc int, irc int, arc int, inc int,
  nto int, ev int, hwe int, moe int, sa int, fine int)
 BEGIN
-UPDATE `kvantorium_schemas`.`pixels` SET `part_of_comp` = poc, `make_content` = mc, `invite_friend` = ifriend, `clean_kvantum` = ck, `filled_project_card_on_time` = fpcot, `finished_project_with_product` = fpwp,
+UPDATE `kvant`.`pixels` SET `part_of_comp` = poc, `make_content` = mc, `invite_friend` = ifriend, `clean_kvantum` = ck, `filled_project_card_on_time` = fpcot, `finished_project_with_product` = fpwp,
  `regional_competition` = rc, `interregional_competition` = irc, `all_russian_competition` = arc, `international_competition` = inc, 
  `nto` = nto, `become_an_engineering_volunteer` = ev, `help_with_event` = hwe, `make_own_event` = moe, `special_achievements` = sa, 
  `fine` = fine WHERE (`id_student` = id);
@@ -3813,7 +3813,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `update_rent`(In i INT, e INT, r INT, d DATE, st TIME, et TIME)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-	UPDATE `kvantorium_schemas`.`rent` SET `id_event` = e,`id_room` = r, `date` = d, `start_time` = st, `end_time` = et WHERE (`id` = i);
+	UPDATE `kvant`.`rent` SET `id_event` = e,`id_room` = r, `date` = d, `start_time` = st, `end_time` = et WHERE (`id` = i);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -3833,7 +3833,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `update_result`(IN id_e INT, id_emp INT, r VARCHAR(250))
 BEGIN
-	UPDATE `kvantorium_schemas`.`responsible_for_part_events` SET `result_of_responsible` = r WHERE (`id_event` = id_e and `id_employee`=id_emp);
+	UPDATE `kvant`.`responsible_for_part_events` SET `result_of_responsible` = r WHERE (`id_event` = id_e and `id_employee`=id_emp);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -3852,8 +3852,8 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `update_schedule`(in id int, id_r int, id_g int, sT varchar(8), eT varchar(8))
 BEGIN
-Update `kvantorium_schemas`.`schedule`  set `group` = id_g, `startTime`= sT, `endTime`=eT where idlesson = id;
-Update `kvantorium_schemas`.`employees_schedule` set room = id_r where idSchedule = id;
+Update `kvant`.`schedule`  set `group` = id_g, `startTime`= sT, `endTime`=eT where idlesson = id;
+Update `kvant`.`employees_schedule` set room = id_r where idSchedule = id;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -3874,7 +3874,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `update_student`(in i int, sS varcha
 n tinyint(1), sP varchar(40), nP varchar(30), pP varchar(35), e varchar(50), p varchar(18))
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-UPDATE `kvantorium_schemas`.`students` SET `surnameStudent` = sS, `nameStudent` = nS, `patronymicStudent` = pS,
+UPDATE `kvant`.`students` SET `surnameStudent` = sS, `nameStudent` = nS, `patronymicStudent` = pS,
  `birthdayStudent` = b, `navigator` = n, `surnameParent` = sP, `nameParent` = nP, `patronymicParent` = pP,
  `E-mail` = e, `phone` = p WHERE (`idStudent` = i);
 SET SQL_SAFE_UPDATES = 1;
@@ -3896,7 +3896,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `update_student_to_group`(in i int, i_g1 int, i_g2 int)
 BEGIN
-	UPDATE `kvantorium_schemas`.`students_groups` SET idGroup = i_g2 WHERE idStudent = i and idGroup = i_g1;
+	UPDATE `kvant`.`students_groups` SET idGroup = i_g2 WHERE idStudent = i and idGroup = i_g1;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;

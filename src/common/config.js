@@ -22,7 +22,7 @@ module.exports = {
     port: config.port,
     user: config.user,
     password: config.password,
-    database: config.database,
+    database: config.database || 'kvant',
     apiPort: config.apiPort || 3000
     });
   },
