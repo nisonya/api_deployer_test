@@ -6,43 +6,57 @@
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
+  <div class="setup-wrapper">
+    <h5>НАСТРОЙКА ПОДКЛЮЧЕНИЯ</h5>
+
+    <!-- Вкладки сверху, вне карточки -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="db">Подключение к БД</button>
+      <button class="tab-btn" data-tab="api">Настройки API</button>
+    </div>
+
+    <!-- Карточка только с содержимым -->
     <div class="container setup-container">
-    <h1>НАСТРОЙКА ПОДКЛЮЧЕНИЯ</h1>
-
-    <form id="dbForm">
-      <div class="form-group">
-        <label for="host">Хост</label>
-        <input type="text" id="host" value="127.0.0.1" required>
+      <!-- Вкладка БД -->
+      <div id="db" class="tab-content active">
+        <form id="dbForm">
+          <div class="form-group">
+            <label for="host">Хост</label>
+            <input type="text" id="host" value="127.0.0.1" required>
+          </div>
+          <div class="form-group">
+            <label for="port">Порт</label>
+            <input type="number" id="port" value="3306" required>
+          </div>
+          <div class="form-group">
+            <label for="user">Пользователь</label>
+            <input type="text" id="user" value="root" required>
+          </div>
+          <div class="form-group">
+            <label for="password">Пароль</label>
+            <input type="password" id="password" placeholder="Введите пароль">
+          </div>
+          <div class="form-group">
+            <label for="database">Имя базы данных</label>
+            <input type="text" id="database" value="kvant" readonly class="static-field">
+          </div>
+          <div class="message" id="message"></div>
+          <button type="button" class="button" id="testBtn">Тест подключения</button>
+          <button type="submit" class="button" id="saveBtn" disabled>Сохранить и запустить</button>
+        </form>
       </div>
 
-      <div class="form-group">
-        <label for="port">Порт</label>
-        <input type="number" id="port" value="3306" required>
+      <!-- Вкладка API -->
+      <div id="api" class="tab-content">
+        <form id="apiForm">
+          <div class="form-group">
+            <label for="apiPort">Порт API</label>
+            <input type="number" id="apiPort" value="3000" min="1024" max="65535" required>
+          </div>
+          <button type="submit" class="button" id="saveApiBtn">Сохранить порт API</button>
+        </form>
       </div>
-
-      <div class="form-group">
-        <label for="user">Пользователь</label>
-        <input type="text" id="user" value="root" required>
-      </div>
-
-      <div class="form-group">
-        <label for="password">Пароль</label>
-        <input type="password" id="password" placeholder="Введите пароль">
-      </div>
-
-      <div class="form-group">
-        <label for="database">Имя базы данных</label>
-        <input type="text" id="database" placeholder="kvan_db" required>
-      </div>
-      <div class="form-group">
-        <label for="apiPort">Порт API</label>
-        <input type="number" id="apiPort" value="3000" min="1024" max="65535" required>
-      </div>
-      <div class="message" id="message"></div>
-
-      <button type="button" class="button" id="testBtn">Тест подключения</button>
-      <button type="submit" class="button" id="saveBtn" disabled>Сохранить и запустить</button>
-    </form>
+    </div>
   </div>
 
   <script src="../js/db_setup.js"></script>

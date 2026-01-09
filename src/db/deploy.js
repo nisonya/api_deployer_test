@@ -6,6 +6,8 @@ async function deploy() {
   const pool = await getPool();
   const conn = await pool.getConnection();
   try {
+
+    await conn.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME}\``);
     const [rows] = await conn.query(
       `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES 
        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'attendance'`,

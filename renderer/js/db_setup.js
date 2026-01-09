@@ -1,25 +1,29 @@
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
 const form = document.getElementById('dbForm');
 const testBtn = document.getElementById('testBtn');
 const saveBtn = document.getElementById('saveBtn');
 const message = document.getElementById('message');
 
 async function getFormData() {
-  console.log('Aaaaaaaaaaaaaaaaa');
   return {
     host: document.getElementById('host').value.trim(),
     port: parseInt(document.getElementById('port').value),
     user: document.getElementById('user').value.trim(),
     password: document.getElementById('password').value,
-    database: document.getElementById('database').value.trim(),
-    apiPort: parseInt(document.getElementById('apiPort').value)
+    database: document.getElementById('database').value.trim()
   };
 }
 async function validateForm(config) {
   if (!config.host) return 'Укажите хост';
   if (!config.port) return 'Укажите порт';
   if (!config.user) return 'Укажите пользователя';
-  if (!config.database) return 'Укажите имя БД';
-  if (!config.apiPort) return 'Укажите порт API';
   return null;
 }
 testBtn.addEventListener('click', async () => {
@@ -49,10 +53,21 @@ testBtn.addEventListener('click', async () => {
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const config = await getFormData();
-  await window.electronAPI.saveDbConfig(config);
+  await window.electronAPI.saveDBConfig(config);
   // Перезапуск происходит в main.js
 });
-
-
-
+const apiForm = document.getElementById('apiForm');
+const saveApiBtn = document.getElementById('saveApiBtn');
+apiForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const apiPort = parseInt(document.getElementById('apiPort').value);
+  if (isNaN(apiPort) || apiPort < 1024 || apiPort > 65535) {
+    alert('Порт должен быть от 1024 до 65535');
+    return;
+  }
+  const currentConfig = await window.electronAPI.getDbConfig() || {};
+  const newConfig = { ...currentConfig, apiPort };
+  await window.electronAPI.saveDbConfig(newConfig);
+  alert('Порт API сохранён. Перезапустите приложение.');
+});
 console.log('JS загружен, слушатели добавлены');
