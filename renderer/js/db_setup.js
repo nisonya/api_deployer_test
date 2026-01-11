@@ -11,6 +11,18 @@ const testBtn = document.getElementById('testBtn');
 const saveBtn = document.getElementById('saveBtn');
 const message = document.getElementById('message');
 
+window.addEventListener('DOMContentLoaded', async () => {
+  
+  const config = await window.electronAPI.getDbConfig();
+  if (config) {
+    document.getElementById('host').value = config.host || '127.0.0.1';
+    document.getElementById('port').value = config.port || 3306;
+    document.getElementById('user').value = config.user || 'root';
+    document.getElementById('database').value = config.database || 'kvant';
+    document.getElementById('apiPort').value = config.apiPort || 3000;
+  }
+});
+
 async function getFormData() {
   return {
     host: document.getElementById('host').value.trim(),
@@ -54,7 +66,9 @@ form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const config = await getFormData();
   await window.electronAPI.saveDBConfig(config);
-  // Перезапуск происходит в main.js
+  message.textContent = 'Настройки сохранены! Приложение автоматически перезагрузится.';
+  message.style.color = 'var(--accent-green)';
+  setTimeout(() => window.electronAPI.restartApp(), 3000);
 });
 const apiForm = document.getElementById('apiForm');
 const saveApiBtn = document.getElementById('saveApiBtn');
