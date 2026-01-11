@@ -1,25 +1,25 @@
-let Store = null;
-
-async function getStore() {
-  if (!Store) {
+let StoreInstance = null;
+async function initStore() {
+  if (!StoreInstance) {
     const mod = await import('electron-store');
-    Store = mod.default;
+    const Store = mod.default;
+    StoreInstance = new Store({
+      encryptionKey: process.env.STORE_ENCRYPTION_KEY || undefined,
+      defaults: { dbConfig: null }
+    });
   }
-  return new Store({
-    encryptionKey: process.env.STORE_ENCRYPTION_KEY || undefined,
-    defaults: { dbConfig: null }
-  });
+  return StoreInstance;
 }
 module.exports = {
   async getDbConfig() {
-    const store = await getStore();
+    const store = await initStore();
     return store.get('dbConfig');
   },
   async setDbConfig(config) {
-    const store = await getStore();
+    const store = await initStore();
     store.set('dbConfig', {
     host: config.host || '127.0.0.1',
-    port: config.port,
+    port: config.port || 3306,
     user: config.user,
     password: config.password,
     database: config.database || 'kvant',
@@ -27,7 +27,8 @@ module.exports = {
     });
   },
   async isConfigured() {
-    const store = await getStore();
+    const store = await initStore();
     return !!store.get('dbConfig');
-  }
+  },
+  getStoreInstance: async () => await initStore() 
 };

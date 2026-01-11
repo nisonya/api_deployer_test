@@ -1,13 +1,15 @@
 const fs = require('fs').promises;
 const path = require('path');
 const { getPool } = require('./connection');
+const { getDbConfig } = require('../common/config');
 
 async function deploy() {
   const pool = await getPool();
   const conn = await pool.getConnection();
+  const congi = await getDbConfig();
   try {
 
-    await conn.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME}\``);
+    await conn.query(`CREATE DATABASE IF NOT EXISTS \`${config.DB_NAME}\``);
     const [rows] = await conn.query(
       `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES 
        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'attendance'`,

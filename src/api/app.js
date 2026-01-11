@@ -26,6 +26,7 @@ async function startApi(port = process.env.PORT || 3000) {
   await deploy(); // авто-деплой БД при старте
 
   const config = await getDbConfig();
+  console.log(config.user);
   const httpsOptions = {
     key: fs.readFileSync(path.join(__dirname, '../../key.pem')),
     cert: fs.readFileSync(path.join(__dirname, '../../cert.pem'))

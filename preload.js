@@ -9,5 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openDbSetup: () => ipcRenderer.send('open-db-setup'),
   openBackupModal: ()=> ipcRenderer.send('open-backup'),
   exportSeed: () => ipcRenderer.invoke('export-seed'),
-  importSeed: () => ipcRenderer.invoke('import-seed')
+  importSeed: () => ipcRenderer.invoke('import-seed'),
+  restartApp: () => ipcRenderer.send('restart-app'),
+  getDbConfig: () => ipcRenderer.invoke('get-db-config')
 });

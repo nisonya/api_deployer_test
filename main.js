@@ -4,6 +4,8 @@ const path = require('path');
 const { startApi, stopApi, getStatus } = require('./src/api/app');
 const { isConfigured } = require('./src/common/config');
 const { Console } = require('console');
+const fs = require('fs');
+const { dialog } = require('electron');
 
 let mainWindow = null;
 let setupWindow = null;
@@ -12,7 +14,6 @@ let apiServer = null;
 
 
 function createMainWindow() {
-  console.log('asdasd');
   mainWindow = new BrowserWindow({
     width: 700,
     height: 700,
@@ -41,7 +42,7 @@ function createSetupWindow() {
   });
 
   setupWindow.loadFile('renderer/html/db_setup.html');
-  setupWindow.removeMenu();
+  //setupWindow.removeMenu();
   setupWindow.on('closed', () => {
     setupWindow = null;
     if (!isConfigured()) app.quit(); // если закрыли без сохранения — выход
@@ -74,15 +75,14 @@ function createBackupWindow() {
 
 app.whenReady().then(async () => {
   if (!(await isConfigured())) {
-    // createSetupWindow();
-    createMainWindow();
+    createSetupWindow();
     return;
   }
   createMainWindow();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
-  });
+  });  
 });
 
 // Остановка API при закрытии
@@ -135,9 +135,13 @@ ipcMain.handle('test-db-connection', async (event, config) => {
 });
 
 ipcMain.handle('save-db-config', async (event, config) => {
-  require('./src/common/config').setDbConfig(config);
+  await require('./src/common/config').setDbConfig(config);
+  return { success: true };
+});
+
+ipcMain.on('restart-app', () => {
   app.relaunch();
-  app.exit();
+  app.quit();
 });
 
 ipcMain.on('open-db-setup', () => {
@@ -147,7 +151,16 @@ ipcMain.on('open-db-setup', () => {
 ipcMain.on('open-backup', () => {
   createBackupWindow();
 });
-
+ipcMain.handle('get-db-config', async () => {
+  const config = await require('./src/common/config').getDbConfig();
+  return config ? {
+    host: config.host,
+    port: config.port,
+    user: config.user,
+    database: config.database,
+    apiPort: config.apiPort
+  } : null;
+});
 // Экспорт
 ipcMain.handle('export-seed', async () => {
   const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
