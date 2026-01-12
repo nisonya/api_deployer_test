@@ -5,9 +5,10 @@ const settingsBtn = document.getElementById('settingsBtn');
 const backUpBtn = document.getElementById('backupHeader');
 async function updateStatus() {
   const res = await window.electronAPI.getApiStatus();
+  const config = await window.electronAPI.getDbConfig();
   if (res.running) {
     statusEl.textContent = 'Сервер запущен';
-    addressEl.textContent = 'https://localhost:3000';
+    addressEl.textContent = `https://localhost:${config?.apiPort || 3000}`;
     switchEl.checked = true;
   } else {
     statusEl.textContent = 'Сервер остановлен';
