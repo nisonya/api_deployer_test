@@ -54,7 +54,7 @@ h1 {
 }
 .setup-container h1 {
   font-size: 2.4rem;           /* с 3rem → меньше */
-  margin-bottom: 30px;         /* с 40px */
+  margin-bottom: 10px;         /* с 40px */
 }
 
 /* Main window */
@@ -205,9 +205,9 @@ input:checked ~ .off-text {
   color: var(--accent);
   font-weight: bold;
 }
-h5 {
+h4 {
   font-family: 'Bank Gothic Russ', 'Orbitron', sans-serif;
-  font-size: 1rem;          /* ← здесь основное изменение */
+  font-size: 1.2rem;          /* ← здесь основное изменение */
   font-weight: 800;
   color: var(--accent);
   margin: 0 0 20px;           /* чуть меньше отступ снизу */
@@ -227,7 +227,18 @@ h5 {
 /* Карточка теперь без лишних отступов сверху */
 .setup-container {
   margin-top: 0;
-  padding-top: 30px;
+  padding-top: 20px;
+  justify-content: center;
+}
+.container.setup-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;          /* ← горизонтальное центрирование детей */
+  justify-content: flex-start;  /* сверху вниз */
+  width: 100%;
+  max-width: 500px;             /* твоя ширина */
+  margin: 0 auto;               /* центрирование самой карточки в setup-wrapper */
+  padding: 30px 20px;           /* внутренние отступы */
 }
 .static-field {
   background: #f0f0f0;          /* сероватый фон, как disabled */
@@ -251,9 +262,11 @@ form {
 }
 
 .form-group {
+  max-width: 400px;
   width: 100%;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   text-align: left;
 }
 
@@ -265,8 +278,8 @@ form {
 }
 
 .form-group input {
-  width: 100%;
-  min-width: 250px;
+  width: 400px; 
+  max-width: 100%;
   padding: 12px 14px;
   font-size: 1rem;
   background: #f8f8f8;
@@ -284,6 +297,7 @@ form {
 }
 
 .message {
+  max-width: 400px;
   min-height: 24px;
   font-weight: bold;
   font-size: 1rem;
@@ -295,7 +309,7 @@ form {
   background: var(--accent-green);
   color: white;
   border: none;
-  padding: 14px 24px;
+  padding: 14px 10px;
   border-radius: 12px;
   font-size: 1rem;
   font-weight: bold;
@@ -313,6 +327,53 @@ form {
   background: #ccc;
   color: #666;
   cursor: not-allowed;
+}
+.restart-banner {
+  background: rgba(0, 48, 135, 0.12);   /* лёгкий синий фон всегда */
+  border-bottom: 2px solid var(--accent);
+  height: 70px;                         /* фиксированная высота — подбери под дизайн */
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  transition: background 0.3s;
+}
+
+.restart-banner.hidden {
+  display: none;
+}
+
+.restart-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all .3s;
+}
+.banner-text {
+  font-weight: bold;
+  color: var(--accent);
+  font-size: 1.05rem;
+}
+
+.banner-text.hidden,
+.restart-btn.hidden {
+  display: none;
+}
+
+.restart-btn:hover {
+  background: #002055;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.restart-banner.active {
+  background: rgba(0, 48, 135, 0.2);
 }
 
 #saveBtn {
@@ -342,4 +403,13 @@ form {
 .clickable-header:hover {
   color: #002055;                    /* темнее на hover */
   text-decoration-thickness: 2px;
+}
+#dbForm,
+#apiForm {
+  width: 100%;
+  max-width: 400px;             /* ширина формы — подбери под свои поля */
+  display: flex;
+  flex-direction: column;
+  align-items: center;          /* центрирует все элементы внутри формы */
+  gap: 12px;                    /* расстояние между группами */
 }

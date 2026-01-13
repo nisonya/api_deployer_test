@@ -10,6 +10,19 @@ const form = document.getElementById('dbForm');
 const testBtn = document.getElementById('testBtn');
 const saveBtn = document.getElementById('saveBtn');
 const message = document.getElementById('message');
+const restartBanner = document.getElementById('restart-banner');
+const bannerText = document.getElementById('banner-text');
+const restartBtn = document.getElementById('restartBtn');
+
+function activateBanner() {
+  bannerText.textContent = 'Настройки изменены. Перезагрузите приложение.';
+  bannerText.classList.remove('hidden');
+  restartBtn.classList.remove('hidden');
+  restartBanner.classList.add('active');
+}
+restartBtn.addEventListener('click', () => {
+  window.electronAPI.restartApp();
+});
 
 window.addEventListener('DOMContentLoaded', async () => {
   
@@ -67,9 +80,8 @@ form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const config = await getFormData();
   await window.electronAPI.saveDBConfig(config);
-  message.textContent = 'Настройки сохранены! Приложение автоматически перезагрузится.';
-  message.style.color = 'var(--accent-green)';
-  setTimeout(() => window.electronAPI.restartApp(), 3000);
+  alert('Настройки БД сохранены. Для применения перезагрузите приложение.');
+  activateBanner();
 });
 const apiForm = document.getElementById('apiForm');
 const saveApiBtn = document.getElementById('saveApiBtn');
@@ -83,7 +95,8 @@ apiForm.addEventListener('submit', async (e) => {
   }
   const currentConfig = await window.electronAPI.getDbConfig() || {};
   const newConfig = { ...currentConfig, apiPort };
-  await window.electronAPI.saveDBConfig(newConfig);
-  alert('Порт API сохранён. Перезапустите приложение.');
+  await window.electronAPI.saveDBConfig(newConfig);  
+  alert('Настройки БД сохранены. Для применения перезагрузите приложение.');
+  activateBanner();
 });
 console.log('JS загружен, слушатели добавлены');
