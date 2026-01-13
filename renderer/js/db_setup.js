@@ -14,6 +14,7 @@ const message = document.getElementById('message');
 window.addEventListener('DOMContentLoaded', async () => {
   
   const config = await window.electronAPI.getDbConfig();
+  console.log(config.apiPort);
   if (config) {
     document.getElementById('host').value = config.host || '127.0.0.1';
     document.getElementById('port').value = config.port || 3306;
@@ -73,6 +74,7 @@ form.addEventListener('submit', async (e) => {
 const apiForm = document.getElementById('apiForm');
 const saveApiBtn = document.getElementById('saveApiBtn');
 apiForm.addEventListener('submit', async (e) => {
+  console.log('saving');
   e.preventDefault();
   const apiPort = parseInt(document.getElementById('apiPort').value);
   if (isNaN(apiPort) || apiPort < 1024 || apiPort > 65535) {
@@ -81,7 +83,7 @@ apiForm.addEventListener('submit', async (e) => {
   }
   const currentConfig = await window.electronAPI.getDbConfig() || {};
   const newConfig = { ...currentConfig, apiPort };
-  await window.electronAPI.saveDbConfig(newConfig);
+  await window.electronAPI.saveDBConfig(newConfig);
   alert('Порт API сохранён. Перезапустите приложение.');
 });
 console.log('JS загружен, слушатели добавлены');
