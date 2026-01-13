@@ -9,7 +9,11 @@
     "build:linux": "electron-builder --linux",
     "build:all": "electron-builder --win --linux",
     "build": "electron-builder",
-    "test": "jest"
+    "test": "jest",                          
+    "test:watch": "jest --watchAll",        
+    "test:coverage": "jest --coverage",    
+    "test:preload": "jest tests/preload.test.js", 
+    "test:preload:watch": "jest --watch tests/preload.test.js"
   },
   "build": {
     "appId": "com.yourcompany.yourapp",
