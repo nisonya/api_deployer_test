@@ -13,7 +13,9 @@
     "test:watch": "jest --watchAll",        
     "test:coverage": "jest --coverage",    
     "test:preload": "jest tests/preload.test.js", 
-    "test:preload:watch": "jest --watch tests/preload.test.js"
+    "test:preload:watch": "jest --watch tests/preload.test.js",
+    "test:main:watch": "jest --watch tests/main/handlers.test.js",
+    "test:main": "jest tests/main"
   },
   "build": {
     "appId": "com.yourcompany.yourapp",
