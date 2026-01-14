@@ -27,7 +27,6 @@ restartBtn.addEventListener('click', () => {
 window.addEventListener('DOMContentLoaded', async () => {
   
   const config = await window.electronAPI.getDbConfig();
-  console.log(config.apiPort);
   if (config) {
     document.getElementById('host').value = config.host || '127.0.0.1';
     document.getElementById('port').value = config.port || 3306;
