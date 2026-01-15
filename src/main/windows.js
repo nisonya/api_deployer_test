@@ -21,7 +21,7 @@ function createMainWindow() {
 function createSetupWindow(parentWindow = null) {
   const win = new BrowserWindow({
     width: 600,
-    height: 1200,
+    height: 950,
     parent: parentWindow, // ← теперь параметр
     modal: true,
     resizable: false,
