@@ -1,19 +1,19 @@
 const fs = require('fs').promises;
 const path = require('path');
-const { getPool } = require('./connection');
+const { getAdminPool } = require('./connection');
 const { getDbConfig } = require('../common/config');
 
 async function deploy() {
-  const pool = await getPool();
+  const pool = await getAdminPool();
   const conn = await pool.getConnection();
-  const congi = await getDbConfig();
+  const config = await getDbConfig();
   try {
-
-    await conn.query(`CREATE DATABASE IF NOT EXISTS \`${config.DB_NAME}\``);
+    await conn.query(`CREATE DATABASE IF NOT EXISTS \`${config.database}\``);
+    await conn.query(`USE \`${config.database}\``);
     const [rows] = await conn.query(
       `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES 
        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'attendance'`,
-      [process.env.DB_NAME]
+      [config.database]
     );
 
     if (rows.length > 0) {
@@ -24,7 +24,17 @@ async function deploy() {
     console.log('Разворачиваем схему...');
     const schemaPath = path.join(__dirname, 'scripts/schema.sql');
     const schemaSql = await fs.readFile(schemaPath, 'utf8');
-    await conn.query(schemaSql);
+    const statements = schemaSql
+      .split(';')
+      .map(s => s.trim())
+      .filter(s => s && !s.startsWith('--') && !s.startsWith('/*')); // убираем комментарии
+
+    for (const stmt of statements) {
+      if (stmt) {
+        await conn.query(stmt);
+      }
+    }
+
     console.log('Схема применена успешно');
 
     // Опциональный seed

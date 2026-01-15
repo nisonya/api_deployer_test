@@ -1,5 +1,5 @@
 const { ipcMain, dialog } = require('electron');
-const { startApi, stopApi, getStatus } = require('../api/app');
+const { startApi, stopApi } = require('../api/app');
 const { getDbConfig, setDbConfig } = require('../common/config');
 const { getPool } = require('../db/connection');
 const { getApiServer, setApiServer } = require('./state');
