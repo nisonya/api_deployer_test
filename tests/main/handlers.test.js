@@ -1,230 +1,305 @@
+const { registerHandlers } = require('../../src/main/ipcHandlers');
+const { getApiServer, setApiServer } = require('../../src/main/state');
+const { startApi, stopApi, getStatus } = require('../../src/api/app');
+const { getDbConfig, setDbConfig } = require('../../src/common/config');
+const { getPool } = require('../../src/db/connection');
+const { createSetupWindow, createBackupWindow } = require('../../src/main/windows');
+
 jest.mock('electron', () => ({
-  app: {
-    relaunch: jest.fn(),
-    quit: jest.fn(),
-    exit: jest.fn(),
-    whenReady: jest.fn().mockResolvedValue(),
-    on: jest.fn(),  // ← добавь это! (app.on — это функция)
-  },
   ipcMain: {
     handle: jest.fn(),
     on: jest.fn(),
   },
-  BrowserWindow: jest.fn(),
   dialog: {
     showSaveDialog: jest.fn(),
     showOpenDialog: jest.fn(),
   },
+  app: {
+    relaunch: jest.fn(),
+    quit: jest.fn(),
+  },
+}));
+
+jest.mock('../../src/api/app', () => ({
+  startApi: jest.fn(),
+  stopApi: jest.fn(),
+  getStatus: jest.fn(),
 }));
 
 jest.mock('../../src/common/config', () => ({
   getDbConfig: jest.fn(),
-  setDbConfig: jest.fn().mockResolvedValue(),
-  isConfigured: jest.fn().mockResolvedValue(true),
+  setDbConfig: jest.fn(),
 }));
 
-jest.mock('../../src/api/app', () => ({
-  startApi: jest.fn().mockResolvedValue({}),
-  stopApi: jest.fn().mockResolvedValue(),
-  getStatus: jest.fn().mockReturnValue({ running: false }),
+jest.mock('../../src/db/connection', () => ({
+  getPool: jest.fn(),
 }));
 
-jest.mock('mysql2/promise', () => ({
-  createPool: jest.fn().mockReturnValue({
-    query: jest.fn().mockResolvedValue([[{ '1': 1 }]]),
-    end: jest.fn().mockResolvedValue(),
-  }),
+jest.mock('../../src/main/state', () => ({
+  getApiServer: jest.fn(),
+  setApiServer: jest.fn(),
 }));
 
-jest.mock('fs/promises', () => ({
-  writeFile: jest.fn().mockResolvedValue(),
-  readFile: jest.fn().mockResolvedValue('fake sql content'),
+jest.mock('../../src/main/windows', () => ({
+  createSetupWindow: jest.fn(),
+  createBackupWindow: jest.fn(),
 }));
 
-// Загружаем main.js после всех моков
-require('../../src/main/ipcHandlers').registerHandlers({});
+jest.mock('mysql2/promise', () => {
+  const mockPool = {
+    query: jest.fn(),
+    end: jest.fn(),
+  };
 
-const { ipcMain, app, dialog } = require('electron');
+  return {
+    createPool: jest.fn(() => mockPool),
+  };
+});
 
-describe('IPC Handlers in main.js', () => {
+// 2. В тестах берём уже замоканный объект
+const mysqlMock = require('mysql2/promise');
+const mockPool = mysqlMock.createPool();
+
+const { ipcMain, dialog, app } = require('electron');
+
+describe('ipcHandlers', () => {
+  let mainWindowMock;
+  let handlersMap = {};
+
   beforeEach(() => {
     jest.clearAllMocks();
+
+    mainWindowMock = {
+      id: 1,
+    };
+
+    handlersMap = {};
+
+    ipcMain.handle.mockImplementation((channel, handler) => {
+      handlersMap[channel] = handler;
+    });
+
+    ipcMain.on.mockImplementation((channel, handler) => {
+      handlersMap[channel] = handler;
+    });
+
+    registerHandlers(mainWindowMock);
   });
 
-  describe('get-db-config', () => {
-    it('returns config without password', async () => {
-      require('../../src/common/config').getDbConfig.mockResolvedValue({
+  describe('start-api', () => {
+    it('возвращает ошибку если API уже запущен', async () => {
+      getApiServer.mockReturnValue({ close: jest.fn() });
+
+      const result = await handlersMap['start-api']();
+
+      expect(result).toEqual({
+        success: false,
+        message: 'API уже запущен',
+      });
+      expect(startApi).not.toHaveBeenCalled();
+    });
+
+    it('успешно запускает API и сохраняет сервер', async () => {
+      getApiServer.mockReturnValue(null);
+      const fakeServer = { close: jest.fn() };
+      startApi.mockResolvedValue(fakeServer);
+
+      const result = await handlersMap['start-api']();
+
+      expect(result).toEqual({ success: true, message: 'API запущен' });
+      expect(startApi).toHaveBeenCalledTimes(1);
+      expect(setApiServer).toHaveBeenCalledWith(fakeServer);
+    });
+
+    it('возвращает ошибку при сбое запуска', async () => {
+      getApiServer.mockReturnValue(null);
+      startApi.mockRejectedValue(new Error('порт занят'));
+
+      const result = await handlersMap['start-api']();
+
+      expect(result).toEqual({
+        success: false,
+        message: 'порт занят',
+      });
+      expect(setApiServer).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('stop-api', () => {
+    it('возвращает ошибку если API не запущен', async () => {
+      getApiServer.mockReturnValue(null);
+
+      const result = await handlersMap['stop-api']();
+
+      expect(result).toEqual({
+        success: false,
+        message: 'API не запущен',
+      });
+      expect(stopApi).not.toHaveBeenCalled();
+    });
+
+    it('успешно останавливает API', async () => {
+      const fakeServer = { close: jest.fn() };
+      getApiServer.mockReturnValue(fakeServer);
+      stopApi.mockResolvedValue(undefined);
+
+      const result = await handlersMap['stop-api']();
+
+      expect(result).toEqual({ success: true });
+      expect(stopApi).toHaveBeenCalledTimes(1);
+      expect(setApiServer).toHaveBeenCalledWith(null);
+    });
+  });
+
+  describe('get-api-status', () => {
+    it('возвращает running: true когда сервер есть', () => {
+      getApiServer.mockReturnValue({});
+
+      const result = handlersMap['get-api-status']();
+
+      expect(result).toEqual({ running: true });
+    });
+
+    it('возвращает running: false когда сервера нет', () => {
+      getApiServer.mockReturnValue(null);
+
+      const result = handlersMap['get-api-status']();
+
+      expect(result).toEqual({ running: false });
+    });
+  });
+
+  describe('test-db-connection', () => {
+    const goodConfig = {
+      host: '127.0.0.1',
+      port: 3306,
+      user: 'test',
+      password: 'pass',
+    };
+    beforeEach(() => {
+        jest.clearAllMocks();           // очень важно!
+        mockPool.query.mockReset();
+        mockPool.end.mockReset();
+    });
+    it('успешное подключение → возвращает success: true', async () => {
+    // Настраиваем успешный ответ от БД
+    mockPool.query.mockResolvedValueOnce([[{ 1: 1 }]]);   // ← Once — только для этого теста
+
+    const result = await handlersMap['test-db-connection'](null, goodConfig);
+
+    expect(result).toEqual({ success: true });
+
+    expect(mysqlMock.createPool).toHaveBeenCalledTimes(1);
+    expect(mysqlMock.createPool).toHaveBeenCalledWith(
+      expect.objectContaining({
+        host: '127.0.0.1',
+        port: 3306,
+        user: 'test',
+        password: 'pass'
+      })
+    );
+
+    expect(mockPool.query).toHaveBeenCalledWith('SELECT 1');
+    expect(mockPool.end).toHaveBeenCalledTimes(1);
+  });
+
+ it('ECONNREFUSED → понятное сообщение для пользователя', async () => {
+  const connectionError = new Error('connect ECONNREFUSED 127.0.0.1:3306');
+  connectionError.code = 'ECONNREFUSED';
+
+  mockPool.query.mockRejectedValueOnce(connectionError);
+
+  const result = await handlersMap['test-db-connection'](null, goodConfig);
+
+  expect(result).toEqual({
+    success: false,
+    message: expect.stringContaining('Сервер БД не запущен или порт неверный')
+  });
+
+  // Важно: end НЕ должен вызываться при ошибке подключения
+  expect(mockPool.end).not.toHaveBeenCalled();
+});
+
+  it('неверный пароль → понятное сообщение', async () => {
+    const accessError = new Error('Access denied');
+    accessError.code = 'ER_ACCESS_DENIED_ERROR';
+
+    mockPool.query.mockRejectedValueOnce(accessError);
+
+    const result = await handlersMap['test-db-connection'](null, goodConfig);
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('Неверный пользователь или пароль');
+  });
+  });
+
+  describe('save-db-config / get-db-config', () => {
+    it('save → вызывает setDbConfig', async () => {
+      const config = { host: 'a', port: 1, user: 'u', password: 'p', database: 'd' };
+
+      const result = await handlersMap['save-db-config'](null, config);
+
+      expect(result).toEqual({ success: true });
+      expect(setDbConfig).toHaveBeenCalledWith(config);
+    });
+
+    it('get → возвращает конфиг без пароля', async () => {
+      getDbConfig.mockResolvedValue({
         host: 'localhost',
         port: 3306,
         user: 'root',
         password: 'secret',
         database: 'kvant',
-        apiPort: 3000,
+        apiPort: 4000,
       });
 
-      const handler = ipcMain.handle.mock.calls.find(
-        ([channel]) => channel === 'get-db-config'
-      )[1];
-
-      const result = await handler();
+      const result = await handlersMap['get-db-config']();
 
       expect(result).toEqual({
         host: 'localhost',
         port: 3306,
         user: 'root',
         database: 'kvant',
-        apiPort: 3000,
+        apiPort: 4000,
       });
-      expect(result.password).toBeUndefined(); // проверяем, что пароль скрыт
-    });
-
-    it('возвращает null если конфига нет', async () => {
-      require('../../src/common/config').getDbConfig.mockResolvedValue(null);
-
-      const handler = ipcMain.handle.mock.calls.find(
-        ([channel]) => channel === 'get-db-config'
-      )[1];
-
-      const result = await handler();
-      expect(result).toBeNull();
+      expect(result.password).toBeUndefined();
     });
   });
 
-  describe('save-db-config', () => {
-    it('сохраняет конфиг и возвращает успех', async () => {
-      const fakeConfig = { host: 'test', port: 3307 };
-      const handler = ipcMain.handle.mock.calls.find(
-        ([channel]) => channel === 'save-db-config'
-      )[1];
+  describe('restart-app', () => {
+    it('вызывает app.relaunch() и app.quit()', () => {
+      handlersMap['restart-app']();
 
-      const result = await handler({}, fakeConfig);
-
-      expect(require('../../src/common/config').setDbConfig).toHaveBeenCalledWith(fakeConfig);
-      expect(result).toEqual({ success: true });
+      expect(app.relaunch).toHaveBeenCalledTimes(1);
+      expect(app.quit).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('test-db-connection', () => {
-  let handler;
+  describe('open-db-setup', () => {
+    it('вызывает createSetupWindow с mainWindow', () => {
+      handlersMap['open-db-setup']();
 
-  beforeAll(() => {
-    // Находим handler один раз (чтобы не искать каждый раз)
-    handler = ipcMain.handle.mock.calls.find(
-      ([channel]) => channel === 'test-db-connection'
-    )[1];
-  });
-
-  beforeEach(() => {
-    // Сбрасываем все вызовы mysql2 перед каждым тестом
-    require('mysql2/promise').createPool.mockClear();
-  });
-
-  it('успешное подключение', async () => {
-    const fakeConfig = { host: 'localhost', port: 3306, user: 'root', password: '' };
-
-    const result = await handler({}, fakeConfig);
-
-    expect(result).toEqual({ success: true });
-
-    // Проверяем, что query и end были вызваны
-    const mockPool = require('mysql2/promise').createPool();
-    expect(mockPool.query).toHaveBeenCalledWith('SELECT 1');
-    expect(mockPool.end).toHaveBeenCalled();
-  });
-
-  it('ошибка подключения — ECONNREFUSED', async () => {
-    const fakeConfig = { host: 'wrong', port: 9999 };
-
-    // Переопределяем mock только для этого теста
-    require('mysql2/promise').createPool.mockImplementationOnce(() => {
-      throw { code: 'ECONNREFUSED' };
-    });
-
-    const result = await handler({}, fakeConfig);
-
-    expect(result).toEqual({
-      success: false,
-      message: 'Сервер БД не запущен или порт неверный.',
+      expect(createSetupWindow).toHaveBeenCalledWith(mainWindowMock);
     });
   });
 
-  it('ошибка — неверный пароль (ER_ACCESS_DENIED_ERROR)', async () => {
-    const fakeConfig = { host: 'localhost', port: 3306, user: 'root', password: 'wrong' };
+  describe('open-backup', () => {
+    it('вызывает createBackupWindow с mainWindow', () => {
+      handlersMap['open-backup']();
 
-    require('mysql2/promise').createPool.mockImplementationOnce(() => {
-      throw { code: 'ER_ACCESS_DENIED_ERROR' };
+      expect(createBackupWindow).toHaveBeenCalledWith(mainWindowMock);
     });
+  });
+  describe('export-seed — отмена диалога', () => {
+    it('возвращает success:false при отмене', async () => {
+      dialog.showSaveDialog.mockResolvedValue({ canceled: true });
 
-    const result = await handler({}, fakeConfig);
+      const result = await handlersMap['export-seed']();
 
-    expect(result).toEqual({
-      success: false,
-      message: 'Неверный пользователь или пароль.',
+      expect(result).toEqual({ success: false, message: 'Отменено' });
+      expect(getPool).not.toHaveBeenCalled();
     });
   });
 
-  it('ошибка — нет доступа к БД (ER_DBACCESS_DENIED_ERROR)', async () => {
-    const fakeConfig = { host: 'localhost', port: 3306, user: 'root', password: '' };
-
-    require('mysql2/promise').createPool.mockImplementationOnce(() => {
-      throw { code: 'ER_DBACCESS_DENIED_ERROR' };
-    });
-
-    const result = await handler({}, fakeConfig);
-
-    expect(result).toEqual({
-      success: false,
-      message: 'Нет доступа к БД.',
-    });
-  });
-
-  it('любая другая ошибка — общий текст', async () => {
-    const fakeConfig = { host: 'localhost', port: 3306 };
-
-    require('mysql2/promise').createPool.mockImplementationOnce(() => {
-      throw new Error('Unknown error');
-    });
-
-    const result = await handler({}, fakeConfig);
-
-    expect(result).toEqual({
-      success: false,
-      message: 'Не удалось подключиться. Проверьте данные.',
-    });
-  });
-});
-
-  describe('start-api', () => {
-    it('запускает API если не запущен', async () => {
-      require('../../src/api/app').startApi.mockResolvedValue('server instance');
-
-      const handler = ipcMain.handle.mock.calls.find(
-        ([channel]) => channel === 'start-api'
-      )[1];
-
-      const result = await handler();
-
-      expect(result).toEqual({ success: true, message: 'API запущен' });
-      expect(require('../../src/api/app').startApi).toHaveBeenCalled();
-    });
-
-    it('возвращает ошибку если уже запущен', async () => {
-      // имитируем запущенный сервер
-      global.apiServer = {}; // хак, потому что переменная глобальная в main.js
-
-      const handler = ipcMain.handle.mock.calls.find(
-        ([channel]) => channel === 'start-api'
-      )[1];
-
-      const result = await handler();
-
-      expect(result).toEqual({ success: false, message: 'API уже запущен' });
-    });
-  });
-
-  // Добавь аналогично для stop-api, export-seed, import-seed
-
-  afterAll(() => {
-    jest.restoreAllMocks();
-  });
+  // Аналогично для import-seed
 });

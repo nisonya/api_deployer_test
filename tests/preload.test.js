@@ -9,7 +9,7 @@ describe('preload.js', () => {
     jest.clearAllMocks();
     // перезагружаем preload, чтобы mocks применились
     jest.isolateModules(() => {
-      require('../preload'); // путь к твоему preload.js
+      require('../src/main/preload'); // путь к твоему preload.js
     });
   });
 
