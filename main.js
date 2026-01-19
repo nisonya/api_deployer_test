@@ -6,14 +6,14 @@ const { createMainWindow, createSetupWindow} = require('./src/main/windows');
 let mainWindow = null;
 
 app.whenReady().then(async () => {
+  
+  require('./src/main/ipcHandlers').registerHandlers(mainWindow);
   if (!(await isConfigured())) {
     createSetupWindow();
     return;
   }
   createMainWindow();
 
-  // Регистрируем handlers, передавая mainWindow
-  require('./src/main/ipcHandlers').registerHandlers(mainWindow);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();

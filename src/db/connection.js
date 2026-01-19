@@ -32,8 +32,8 @@ async function getAdminPool() {
       password: config.password,
       waitForConnections: true,
       connectionLimit: 5,
-      queueLimit: 0
-      // database НЕ указываем!
+      queueLimit: 0,
+      multipleStatements: true 
     });
   }
   return adminPool;

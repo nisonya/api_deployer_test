@@ -7,27 +7,38 @@ const { createSetupWindow, createBackupWindow} = require('./windows');
 const fs = require('fs');
 const path = require('path');
 
-function registerHandlers(mainWindow) {  // ← принимаем mainWindow как параметр
+function registerHandlers(mainWindow) {
+  
+  ipcMain.handle('get-api-status', () => ({ running: !!getApiServer() })); 
+   ipcMain.handle('get-db-config', async () => {
+    const config = await getDbConfig();
+    return config ? {
+      host: config.host,
+      port: config.port,
+      user: config.user,
+      database: config.database,
+      apiPort: config.apiPort
+    } : null;
+  });
   ipcMain.handle('start-api', async () => {
-    if (getApiServer()) return { success: false, message: 'API уже запущен' };
+    if (getApiServer()) return { success: false, message: 'API is running' };
 
     try {
       const server = await startApi();
       setApiServer(server);
-      return { success: true, message: 'API запущен' };
+      return { success: true, message: 'API is running' };
     } catch (err) {
       return { success: false, message: err.message };
     }
   });
 
   ipcMain.handle('stop-api', async () => {
-    if (!getApiServer()) return { success: false, message: 'API не запущен' };
+    if (!getApiServer()) return { success: false, message: 'API is not running' };
     await stopApi();
     setApiServer(null);
     return { success: true };
   });
 
-  ipcMain.handle('get-api-status', () => ({ running: !!getApiServer() }));
 
   ipcMain.handle('test-db-connection', async (event, config) => {
     try {
@@ -55,16 +66,7 @@ function registerHandlers(mainWindow) {  // ← принимаем mainWindow к
     return { success: true };
   });
 
-  ipcMain.handle('get-db-config', async () => {
-    const config = await getDbConfig();
-    return config ? {
-      host: config.host,
-      port: config.port,
-      user: config.user,
-      database: config.database,
-      apiPort: config.apiPort
-    } : null;
-  });
+ 
 
   ipcMain.handle('export-seed', async () => {
     const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {

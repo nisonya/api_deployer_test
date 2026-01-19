@@ -5,7 +5,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const { deploy } = require('../db/deploy');
-
+const { getDbConfig} = require('../common/config');
 const app = express();
 
 app.use(express.json());
@@ -18,7 +18,7 @@ app.use('/api/events', require('./modules/events/routes'));
 app.use('/api/schedule', require('./modules/schedule/routes'));
 
 // Корневой эндпоинт для проверки
-app.get('/', (req, res) => res.send('API работает'));
+app.get('/', (req, res) => res.send('API work'));
 
 let server = null;
 
