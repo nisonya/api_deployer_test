@@ -17,42 +17,46 @@ async function deploy() {
     );
 
     if (rows.length > 0) {
-      console.log('БД уже развернута');
+      console.log('DB is alredy deployed');
       return;
     }
 
-    console.log('Разворачиваем схему...');
+    console.log('deploy scheme..');
     const schemaPath = path.join(__dirname, 'scripts/schema.sql');
     const schemaSql = await fs.readFile(schemaPath, 'utf8');
-    const statements = schemaSql
-      .split(';')
-      .map(s => s.trim())
-      .filter(s => s && !s.startsWith('--') && !s.startsWith('/*')); // убираем комментарии
+await conn.query('SET FOREIGN_KEY_CHECKS=0;');
 
-    for (const stmt of statements) {
-      if (stmt) {
-        await conn.query(stmt);
+    let currentDelimiter = ';';
+    const lines = schemaSql.split(/\r?\n/); 
+    let query = '';
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+
+      if (trimmedLine.startsWith('DELIMITER ')) {
+        currentDelimiter = trimmedLine.substring('DELIMITER '.length).trim();
+        continue;
+      }
+
+      query += line + '\n';
+
+      if (query.trim().endsWith(currentDelimiter)) {
+        query = query.trim().slice(0, -currentDelimiter.length).trim();
+        if (query !== '') {
+          await conn.query(query);
+        }
+        query = '';
       }
     }
 
-    console.log('Схема применена успешно');
-
-    // Опциональный seed
-    const seedPath = path.join(__dirname, 'scripts/seed.sql');
-    try {
-      await fs.access(seedPath);
-      if (process.env.SEED_DB === 'true') {
-        console.log('Применяем seed...');
-        const seedSql = await fs.readFile(seedPath, 'utf8');
-        await conn.query(seedSql);
-        console.log('Seed применён');
-      }
-    } catch (err) {
-      if (err.code === 'ENOENT') console.log('seed.sql не найден — пропуск');
-      else throw err;
+    if (query.trim() !== '') {
+      await conn.query(query.trim());
     }
+
+    await conn.query('SET FOREIGN_KEY_CHECKS=1;');
+
+    console.log('schema deployed sucssesfully');
   } catch (err) {
-    console.error('Ошибка деплоя БД:', err);
+    console.error('Deploy error:', err);
     process.exit(1);
   } finally {
     conn.release();
