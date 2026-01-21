@@ -26,6 +26,19 @@ module.exports = {
     apiPort: config.apiPort || 3000
     });
   },
+  async updateApiPort(apiPort) {
+    if (typeof apiPort !== 'number' || apiPort < 1024 || apiPort > 65535) {
+      throw new Error('Некорректный порт API (должен быть от 1024 до 65535)');
+    }
+
+    const store = await initStore();
+    const currentConfig = store.get('dbConfig') || {};
+
+    store.set('dbConfig', {
+      ...currentConfig,
+      apiPort: apiPort
+    });
+  },
   async isConfigured() {
     const store = await initStore();
     return !!store.get('dbConfig');
