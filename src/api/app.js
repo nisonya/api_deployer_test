@@ -19,14 +19,12 @@ app.use('/api/schedule', require('./modules/schedule/routes'));
 
 // Корневой эндпоинт для проверки
 app.get('/', (req, res) => res.send('API work'));
-
 let server = null;
 
-async function startApi(port = process.env.PORT || 3000) {
-  await deploy(); // авто-деплой БД при старте
+async function startApi(port = 3000) {
+  await deploy();
 
   const config = await getDbConfig();
-  console.log(config.user);
   const httpsOptions = {
     key: fs.readFileSync(path.join(__dirname, '../../key.pem')),
     cert: fs.readFileSync(path.join(__dirname, '../../cert.pem'))
@@ -35,7 +33,6 @@ async function startApi(port = process.env.PORT || 3000) {
   server = https.createServer(httpsOptions, app);
 
   return new Promise((resolve, reject) => {
-    const port = config?.apiPort || 3000;
     server.listen(port, '127.0.0.1', () => {
       console.log(`API запущен на https://localhost:${port}`);
       resolve(server);

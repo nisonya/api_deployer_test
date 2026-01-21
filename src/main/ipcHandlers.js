@@ -24,7 +24,9 @@ function registerHandlers(mainWindow) {
     if (getApiServer()) return { success: false, message: 'API is running' };
 
     try {
-      const server = await startApi();
+      const config = await getDbConfig();
+      const apiPort = config?.apiPort || 3000;
+      const server = await startApi(apiPort);
       setApiServer(server);
       return { success: true, message: 'API is running' };
     } catch (err) {
