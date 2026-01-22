@@ -1,6 +1,6 @@
 const { ipcMain, dialog } = require('electron');
 const { startApi, stopApi } = require('../api/app');
-const { getDbConfig, setDbConfig } = require('../common/config');
+const { getDbConfig, setDbConfig, updateApiPort } = require('../common/config');
 const { getPool } = require('../db/connection');
 const { getApiServer, setApiServer } = require('./state');
 const { createSetupWindow, createBackupWindow} = require('./windows');
@@ -67,7 +67,14 @@ function registerHandlers(mainWindow) {
     await setDbConfig(config);
     return { success: true };
   });
-
+  ipcMain.handle('update-api-port', async (event, apiPort) => {
+    try {
+      await updateApiPort(apiPort);
+      return { success: true };
+    } catch (err) {
+      return { success: false, message: err.message };
+    }
+  });
  
 
   ipcMain.handle('export-seed', async () => {

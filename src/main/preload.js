@@ -11,5 +11,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exportSeed: () => ipcRenderer.invoke('export-seed'),
   importSeed: () => ipcRenderer.invoke('import-seed'),
   restartApp: () => ipcRenderer.send('restart-app'),
-  getDbConfig: () => ipcRenderer.invoke('get-db-config')
+  getDbConfig: () => ipcRenderer.invoke('get-db-config'),
+  updateApiPort: (apiPort) => ipcRenderer.invoke('update-api-port', apiPort)
 });

@@ -22,7 +22,7 @@ module.exports = {
     host: config.host || current.host || '127.0.0.1',
     port: config.port || current.port || 3306,
     user: config.user || current.user,
-    password: config.password || current.password,  
+    password: config.password,
     database: config.database || current.database || 'kvant',
     apiPort: config.apiPort || current.apiPort || 3000
   });

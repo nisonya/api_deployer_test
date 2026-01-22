@@ -15,7 +15,8 @@
     "test:preload": "jest tests/preload.test.js", 
     "test:preload:watch": "jest --watch tests/preload.test.js",
     "test:main:watch": "jest --watch tests/main/handlers.test.js",
-    "test:main": "jest tests/main"
+    "test:main": "jest tests/main",
+    "test:config": "node --experimental-vm-modules ./node_modules/.bin/jest ./tests/"
   },
   "build": {
     "appId": "com.yourcompany.yourapp",

@@ -84,7 +84,6 @@ testBtn.addEventListener('click', async () => {
 
 dbForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  console.log('DB save');
   const config = await getDbFormData();
   const validationError = await validateDbForm(config);
   if (validationError) {
@@ -101,7 +100,6 @@ dbForm.addEventListener('submit', async (e) => {
 
 apiForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  console.log('apiport');
   const apiPortInput = document.getElementById('apiPort');
   const apiPort = parseInt(apiPortInput.value);
 
@@ -110,18 +108,13 @@ apiForm.addEventListener('submit', async (e) => {
     message.style.color = 'red';
     return;
   }
-
-  // Получаем текущий config и обновляем ТОЛЬКО apiPort
-  const currentConfig = await window.electronAPI.getDbConfig() || {};
-  const updatedConfig = {
-    ...currentConfig,
-    apiPort: apiPort
-  };
-
-  await window.electronAPI.saveDBConfig(updatedConfig);
-  message.textContent = 'Порт API сохранён. Для применения перезагрузите приложение.';
-  message.style.color = 'var(--accent-green)';
-  activateBanner();
+  try {
+    await window.electronAPI.updateApiPort(apiPort);
+    message.textContent = 'Порт API сохранён. Для применения перезагрузите приложение.';
+    message.style.color = 'var(--accent-green)';
+    activateBanner();
+  } catch (err) {
+    message.textContent = `Ошибка: ${err.message}`;
+    message.style.color = 'red';
+  }
 });
-
-console.log('JS загружен, слушатели добавлены');

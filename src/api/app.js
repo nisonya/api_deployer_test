@@ -34,7 +34,7 @@ async function startApi(port = 3000) {
 
   return new Promise((resolve, reject) => {
     server.listen(port, '127.0.0.1', () => {
-      console.log(`API запущен на https://localhost:${port}`);
+      console.log(`API is running on https://localhost:${port}`);
       resolve(server);
     });
 
