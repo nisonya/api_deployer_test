@@ -6,7 +6,7 @@ let mainWindow = null;
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
-    width: 700,
+    width: 400,
     height: 700,
     webPreferences: {
       preload: path.join(__dirname, './preload.js'),
@@ -15,14 +15,15 @@ function createMainWindow() {
     }
   });
   mainWindow.loadFile('renderer/html/main_window.html');
-  return mainWindow; // ← возвращаем, чтобы можно было использовать
+  mainWindow.removeMenu();
+  return mainWindow; 
 }
 
 function createSetupWindow(parentWindow = null) {
   const win = new BrowserWindow({
     width: 600,
-    height: 950,
-    parent: parentWindow, // ← теперь параметр
+    height: 900,
+    parent: parentWindow, 
     modal: true,
     resizable: false,
     webPreferences: {
@@ -35,6 +36,7 @@ function createSetupWindow(parentWindow = null) {
   win.on('closed', () => {
     if (!isConfigured()) require('electron').app.quit();
   });
+  win.removeMenu();
   return win;
 }
 
