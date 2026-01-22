@@ -16,15 +16,16 @@ module.exports = {
     return store.get('dbConfig');
   },
   async setDbConfig(config) {
-    const store = await initStore();
-    store.set('dbConfig', {
-    host: config.host || '127.0.0.1',
-    port: config.port || 3306,
-    user: config.user,
-    password: config.password,
-    database: config.database || 'kvant',
-    apiPort: config.apiPort || 3000
-    });
+  const store = await initStore();const current = store.get('dbConfig') || {};
+
+  store.set('dbConfig', {
+    host: config.host || current.host || '127.0.0.1',
+    port: config.port || current.port || 3306,
+    user: config.user || current.user,
+    password: config.password || current.password,  
+    database: config.database || current.database || 'kvant',
+    apiPort: config.apiPort || current.apiPort || 3000
+  });
   },
   async updateApiPort(apiPort) {
     if (typeof apiPort !== 'number' || apiPort < 1024 || apiPort > 65535) {
