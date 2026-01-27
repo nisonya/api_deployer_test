@@ -16,7 +16,7 @@ describe('preload.js', () => {
   it('exposes electronAPI with 11 methods', () => {
     expect(contextBridge.exposeInMainWorld).toHaveBeenCalledWith('electronAPI', expect.any(Object));
     const api = contextBridge.exposeInMainWorld.mock.calls[0][1];
-    expect(Object.keys(api)).toHaveLength(11);
+    expect(Object.keys(api)).toHaveLength(12);
     expect(api).toHaveProperty('startApi');
     expect(api).toHaveProperty('getDbConfig');
     expect(api).toHaveProperty('stopApi');
@@ -28,23 +28,24 @@ describe('preload.js', () => {
     expect(api).toHaveProperty('openDbSetup');
     expect(api).toHaveProperty('openBackupModal');
     expect(api).toHaveProperty('restartApp');
+    expect(api).toHaveProperty('updateApiPort');
   });
 
   it('startApi call ipcRenderer.invoke("start-api") and get response', async () => {
     const api = contextBridge.exposeInMainWorld.mock.calls[0][1];
-    ipcRenderer.invoke.mockResolvedValueOnce({ success: false, message: 'API уже запущен' });
+    ipcRenderer.invoke.mockResolvedValueOnce({ success: false, message: 'API is running' });
     const result = await api.startApi();
     expect(ipcRenderer.invoke).toHaveBeenCalledWith('start-api');    
-    expect(result).toEqual({ success: false, message: 'API уже запущен' });
+    expect(result).toEqual({ success: false, message: 'API is running' });
     
   });
   
   it('stopApi call ipcRenderer.invoke("stop-api") and get response', async () => {
     const api = contextBridge.exposeInMainWorld.mock.calls[0][1];
-    ipcRenderer.invoke.mockResolvedValueOnce({ success: false, message: 'API не запущен' });
+    ipcRenderer.invoke.mockResolvedValueOnce({ success: false, message: 'API is not running' });
     const result = await api.stopApi();
     expect(ipcRenderer.invoke).toHaveBeenCalledWith('stop-api');    
-    expect(result).toEqual({ success: false, message: 'API не запущен' });
+    expect(result).toEqual({ success: false, message: 'API is not running' });
     
   });
     

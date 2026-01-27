@@ -94,7 +94,7 @@ describe('ipcHandlers', () => {
 
       expect(result).toEqual({
         success: false,
-        message: 'API уже запущен',
+        message: 'API is running',
       });
       expect(startApi).not.toHaveBeenCalled();
     });
@@ -106,7 +106,7 @@ describe('ipcHandlers', () => {
 
       const result = await handlersMap['start-api']();
 
-      expect(result).toEqual({ success: true, message: 'API запущен' });
+      expect(result).toEqual({ success: true, message: 'API is running' });
       expect(startApi).toHaveBeenCalledTimes(1);
       expect(setApiServer).toHaveBeenCalledWith(fakeServer);
     });
@@ -133,7 +133,7 @@ describe('ipcHandlers', () => {
 
       expect(result).toEqual({
         success: false,
-        message: 'API не запущен',
+        message: 'API is not running',
       });
       expect(stopApi).not.toHaveBeenCalled();
     });

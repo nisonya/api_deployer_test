@@ -4,6 +4,7 @@ async function initStore() {
     const mod = await import('electron-store');
     const Store = mod.default;
     StoreInstance = new Store({
+      projectName: 'api-deployer',
       encryptionKey: process.env.STORE_ENCRYPTION_KEY || undefined,
       defaults: { dbConfig: null }
     });
@@ -21,16 +22,22 @@ module.exports = {
   store.set('dbConfig', {
     host: config.host || current.host || '127.0.0.1',
     port: config.port || current.port || 3306,
-    user: config.user || current.user,
-    password: config.password,
+    user: config.user || current.user || 'root',
+    password: config.password || '',
     database: config.database || current.database || 'kvant',
     apiPort: config.apiPort || current.apiPort || 3000
   });
   },
   async updateApiPort(apiPort) {
-    if (typeof apiPort !== 'number' || apiPort < 1024 || apiPort > 65535) {
-      throw new Error('Некорректный порт API (должен быть от 1024 до 65535)');
-    }
+   if (
+    typeof apiPort !== 'number' ||
+    isNaN(apiPort) ||
+    !Number.isInteger(apiPort) ||
+    apiPort < 1024 ||
+    apiPort > 65535
+  ) {
+    throw new Error('Invalid API port (must be between 1024 and 65535)');
+  }
 
     const store = await initStore();
     const currentConfig = store.get('dbConfig') || {};
