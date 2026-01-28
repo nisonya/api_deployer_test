@@ -57,6 +57,15 @@ describe('preload.js', () => {
     expect(result).toEqual({ running: true });
     
   });
+  it('updateApiPort call ipcRenderer.invoke("update-api-port") and get response', async () => {
+    const fakeApiPort = 3500;
+    const api = contextBridge.exposeInMainWorld.mock.calls[0][1];
+    ipcRenderer.invoke.mockResolvedValueOnce({ success: true });
+    const result = await api.updateApiPort(fakeApiPort);
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith('update-api-port', fakeApiPort);
+    expect(result).toEqual({ success: true });
+    
+  });
   it('testDBConnection transmits config in ipc', async () => {
     const fakeConfig = { host: '127.0.0.1', port: 3306 };
     const api = contextBridge.exposeInMainWorld.mock.calls[0][1];

@@ -50,6 +50,5 @@ module.exports = {
   async isConfigured() {
     const store = await initStore();
     return !!store.get('dbConfig');
-  },
-  getStoreInstance: async () => await initStore() 
+  }
 };

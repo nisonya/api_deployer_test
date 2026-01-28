@@ -9,7 +9,7 @@
     "build:linux": "electron-builder --linux",
     "build:all": "electron-builder --win --linux",
     "build": "electron-builder","test": "jest",
-    "test:sync": "jest",
+    "test:sync": "jest --testPathIgnorePatterns=\"tests/async\"",
     "test:async": "vitest run",
     "test:async:watch": "vitest",
     "test:coverage": "vitest run --coverage",
