@@ -76,53 +76,115 @@ function registerHandlers(mainWindow) {
     }
   });
  
+ipcMain.handle('export-seed', async (event) => {
+  const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+    defaultPath: `kvant-seed-${new Date().toISOString().slice(0,10)}.sql`,
+    filters: [{ name: 'SQL Files', extensions: ['sql'] }]
+  });
 
-  ipcMain.handle('export-seed', async () => {
-    const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
-      defaultPath: `kvant-seed-${new Date().toISOString().slice(0,10)}.sql`,
-      filters: [{ name: 'SQL Files', extensions: ['sql'] }]
-    });
+  if (canceled || !filePath) return { success: false, message: 'Отменено' };
 
-    if (canceled || !filePath) return { success: false, message: 'Отменено' };
+  try {
+    const pool = await getPool();
+    const conn = await pool.getConnection();
 
-    try {
-      const pool = await getPool();
-      const conn = await pool.getConnection();
-      const [tables] = await conn.query('SHOW TABLES');
-      let dump = '-- Kvant seed dump\n\n';
-      for (const table of tables) {
-        const tableName = Object.values(table)[0];
-        const [rows] = await conn.query(`SELECT * FROM \`${tableName}\``);
-        if (rows.length > 0) {
-          dump += `INSERT INTO \`${tableName}\` VALUES\n`;
-          dump += rows.map(row => `(${Object.values(row).map(v => conn.escape(v)).join(',')})`).join(',\n') + ';\n\n';
-        }
+    // Получаем таблицы
+    const [tables] = await conn.query('SHOW TABLES');
+    const tableCount = tables.length;
+    let processed = 0;
+
+    let dump = '-- Kvant seed dump\n\n';
+
+    for (const table of tables) {
+      const tableName = Object.values(table)[0];
+      const [rows] = await conn.query(`SELECT * FROM \`${tableName}\``);
+
+      if (rows.length > 0) {
+        dump += `INSERT INTO \`${tableName}\` VALUES\n`;
+        dump += rows.map(row => `(${Object.values(row).map(v => conn.escape(v)).join(',')})`).join(',\n') + ';\n\n';
       }
-      await fs.promises.writeFile(filePath, dump);
-      return { success: true, filePath };
-    } catch (err) {
-      return { success: false, message: err.message };
+
+      processed++;
+      const progress = Math.round((processed / tableCount) * 100);
+      event.sender.send('export-progress', progress); 
     }
+
+    conn.release();
+    await fs.promises.writeFile(filePath, dump);
+
+    return { success: true, filePath };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+ipcMain.handle('import-seed', async (event) => {
+  const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
+    filters: [{ name: 'SQL Files', extensions: ['sql'] }]
   });
 
-  ipcMain.handle('import-seed', async () => {
-    const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
-      filters: [{ name: 'SQL Files', extensions: ['sql'] }]
-    });
+  if (canceled || !filePaths?.[0]) {
+    return { success: false, message: 'discard' };
+  }
 
-    if (canceled || !filePaths?.[0]) return { success: false, message: 'Отменено' };
+  let conn = null;
+  try {
+    const sql = await fs.promises.readFile(filePaths[0], 'utf8');
 
-    try {
-      const sql = await fs.promises.readFile(filePaths[0], 'utf8');
-      const pool = await getPool();
-      const conn = await pool.getConnection();
-      await conn.query(sql);
-      return { success: true };
-    } catch (err) {
-      return { success: false, message: err.message };
+    console.log('started seed import, file size:', sql.length, 'byte');
+    const lines = sql.split('\n');
+
+    // оставляем только строки, которые начинаются с INSERT
+    const insertLines = lines
+      .map(line => line.trim())
+      .filter(line => line.toUpperCase().startsWith('INSERT INTO'))
+      .filter(line => line.endsWith(';')); // только завершённые запросы
+
+    console.log(`Найдено INSERT-запросов: ${insertLines.length}`);
+
+    if (insertLines.length === 0) {
+      return { success: false, message: 'В файле не найдено ни одного INSERT-запроса' };
     }
-  });
 
+    event.sender.send('import-progress', 0);
+
+    const pool = await getPool();
+    conn = await pool.getConnection();
+
+    await conn.query('SET FOREIGN_KEY_CHECKS = 0;');
+
+    let processed = 0;
+    const total = insertLines.length;
+
+    for (const query of insertLines) {
+      try {
+        await conn.query(query);
+        processed++;
+        const progress = Math.round((processed / total) * 100);
+        event.sender.send('import-progress', progress); 
+
+        await new Promise(resolve => setImmediate(resolve));
+      } catch (queryErr) {
+        console.error(`Ошибка в запросе: ${query.substring(0, 100)}...`, queryErr.message);
+      }
+    }
+
+    await conn.query('SET FOREIGN_KEY_CHECKS = 1;');
+
+    event.sender.send('import-progress', 100);
+
+    console.log('Импорт seed завершён. Обработано INSERT:', processed);
+
+    return { success: true, processedInserts: processed };
+  } catch (err) {
+    console.error('Критическая ошибка импорта seed:', err.message, err.stack);
+    return { success: false, message: err.message || 'Неизвестная ошибка при импорте' };
+  } finally {
+    if (conn) {
+      conn.release();
+      console.log('Соединение освобождено');
+    }
+  }
+});
   ipcMain.on('restart-app', () => {
     require('electron').app.relaunch();
     require('electron').app.quit();

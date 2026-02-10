@@ -145,7 +145,19 @@ input:checked ~ .on-text {
 input:checked ~ .off-text {
   opacity: 0;
 }
-
+#progress-container {
+  margin-top: 10px;
+}
+#progress-bar {
+  width: 100%;
+  height: 20px;
+}
+#progress-text {
+  margin-left: 10px;
+}
+.hidden {
+  display: none;
+}
 /* Шестерёнка */
 .settings-btn {
   background: none;
