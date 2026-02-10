@@ -75,8 +75,7 @@ function registerHandlers(mainWindow) {
       return { success: false, message: err.message };
     }
   });
- 
-ipcMain.handle('export-seed', async (event) => {
+ ipcMain.handle('export-seed', async (event) => {
   const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
     defaultPath: `kvant-seed-${new Date().toISOString().slice(0,10)}.sql`,
     filters: [{ name: 'SQL Files', extensions: ['sql'] }]
@@ -84,37 +83,44 @@ ipcMain.handle('export-seed', async (event) => {
 
   if (canceled || !filePath) return { success: false, message: 'Отменено' };
 
+  let conn = null;
   try {
     const pool = await getPool();
-    const conn = await pool.getConnection();
+    conn = await pool.getConnection();
+    event.sender.send('export-progress', 0);
 
-    // Получаем таблицы
     const [tables] = await conn.query('SHOW TABLES');
-    const tableCount = tables.length;
-    let processed = 0;
 
     let dump = '-- Kvant seed dump\n\n';
+    const total = tables.length;
+    let processed = 0;
 
     for (const table of tables) {
       const tableName = Object.values(table)[0];
       const [rows] = await conn.query(`SELECT * FROM \`${tableName}\``);
 
       if (rows.length > 0) {
-        dump += `INSERT INTO \`${tableName}\` VALUES\n`;
-        dump += rows.map(row => `(${Object.values(row).map(v => conn.escape(v)).join(',')})`).join(',\n') + ';\n\n';
+        const columns = Object.keys(rows[0]); 
+        for (const row of rows) {
+          const values = columns.map(col => conn.escape(row[col])).join(', ');
+          dump += `INSERT INTO \`${tableName}\` (\`${columns.join('`, `')}\`) VALUES (${values});\n`;
+        }
+        dump += '\n';
       }
 
       processed++;
-      const progress = Math.round((processed / tableCount) * 100);
-      event.sender.send('export-progress', progress); 
+      const progress = Math.round((processed / total) * 100);
+      event.sender.send('export-progress', progress);
     }
 
-    conn.release();
     await fs.promises.writeFile(filePath, dump);
+    event.sender.send('export-progress', 100);
 
     return { success: true, filePath };
   } catch (err) {
     return { success: false, message: err.message };
+  } finally {
+    if (conn) conn.release();
   }
 });
 ipcMain.handle('import-seed', async (event) => {
