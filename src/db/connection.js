@@ -14,7 +14,7 @@ async function getPool() {
       password: config.password,
       database: config.database,
       waitForConnections: true,
-      connectionLimit: 10,
+      connectionLimit: 50,
       queueLimit: 0,
       multipleStatements: true 
     });
