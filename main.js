@@ -22,5 +22,32 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', async () => {
   await require('./src/api/app').stopApi();
-  if (process.platform !== 'darwin') app.quit();
+  if (process.platform !== 'darwin') {
+    if (server) {
+      server.close(() => {
+        console.log('Сервер остановлен');
+        app.quit();
+      });
+    } else {
+      app.quit();
+    }
+  }
+});
+
+process.on('SIGTERM', () => {
+  if (server) {
+    server.close(() => {
+      console.log('Сервер остановлен по SIGTERM');
+      process.exit(0);
+    });
+  }
+});
+
+process.on('SIGINT', () => {
+  if (server) {
+    server.close(() => {
+      console.log('Сервер остановлен по SIGINT');
+      process.exit(0);
+    });
+  }
 });
