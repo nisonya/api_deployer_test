@@ -1,5 +1,3 @@
-CREATE DATABASE  IF NOT EXISTS `kvant` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
-USE `kvant`;
 -- MySQL dump 10.13  Distrib 8.0.36, for Win64 (x86_64)
 --
 -- Host: 127.0.0.1    Database: kvant
@@ -48,36 +46,6 @@ CREATE TABLE `attendance` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `category`
---
-
-DROP TABLE IF EXISTS `category`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `category` (
-  `id` int unsigned NOT NULL AUTO_INCREMENT,
-  `name` varchar(50) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id_UNIQUE` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `dasy_of_week`
---
-
-DROP TABLE IF EXISTS `dasy_of_week`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `dasy_of_week` (
-  `id` int unsigned NOT NULL AUTO_INCREMENT,
-  `name` varchar(15) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id_UNIQUE` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `documents`
 --
 
@@ -113,6 +81,7 @@ CREATE TABLE `employees` (
   `schedule` varchar(100) DEFAULT 'Основной график',
   `gender` varchar(1) DEFAULT NULL,
   `KPI` varchar(250) DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT '0',
   PRIMARY KEY (`id_employees`),
   KEY `id_idx` (`position`),
   CONSTRAINT `position_key` FOREIGN KEY (`position`) REFERENCES `position` (`id`)
@@ -172,8 +141,8 @@ DELIMITER ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `employees_BEFORE_DELETE` BEFORE DELETE ON `employees` FOR EACH ROW BEGIN
 SET SQL_SAFE_UPDATES = 0;
-	DELETE FROM `kvant`.`profile` WHERE `employee_id` = OLD.id_employees;
-	DELETE FROM `kvant`.`kvant` WHERE `id_mentor` = OLD.id_employees;
+	DELETE FROM `kvantorium_schemas`.`profile` WHERE `employee_id` = OLD.id_employees;
+	DELETE FROM `kvantorium_schemas`.`kvantum_mentor` WHERE `id_mentor` = OLD.id_employees;
 SET SQL_SAFE_UPDATES = 1;
 END */;;
 DELIMITER ;
@@ -278,7 +247,7 @@ CREATE TABLE `event_plan_organization` (
   `tr_rddm` tinyint DEFAULT '1',
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_UNIQUE` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=250 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=253 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -292,7 +261,7 @@ DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `event_plan_organization_BEFORE_UPDATE` BEFORE UPDATE ON `event_plan_organization` FOR EACH ROW BEGIN
 SET SQL_SAFE_UPDATES = 0;
 if(DATE(old.dates_of_event)!=DATE(new.dates_of_event)) THEN BEGIN
-	DELETE FROM `kvant`.`rent` WHERE `id_event` = OLD.id;
+	DELETE FROM `kvantorium_schemas`.`rent` WHERE `id_event` = OLD.id;
 END; END IF;
 SET SQL_SAFE_UPDATES = 1;
 END */;;
@@ -312,8 +281,8 @@ DELIMITER ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `event_plan_organization_BEFORE_DELETE` BEFORE DELETE ON `event_plan_organization` FOR EACH ROW BEGIN
 SET SQL_SAFE_UPDATES = 0;
-	DELETE FROM `kvant`.`responsible_for_org_events` WHERE `id_event` = OLD.id;
-	DELETE FROM `kvant`.`rent` WHERE `id_event` = OLD.id;
+	DELETE FROM `kvantorium_schemas`.`responsible_for_org_events` WHERE `id_event` = OLD.id;
+	DELETE FROM `kvantorium_schemas`.`rent` WHERE `id_event` = OLD.id;
 SET SQL_SAFE_UPDATES = 1;
 END */;;
 DELIMITER ;
@@ -348,7 +317,7 @@ CREATE TABLE `event_plan_participation` (
   KEY `type_idx` (`id_type`),
   CONSTRAINT `frorm_key` FOREIGN KEY (`form_of_holding`) REFERENCES `form_of_holding` (`id`),
   CONSTRAINT `hgujbu` FOREIGN KEY (`id_type`) REFERENCES `type_of_part_event` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=224 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=228 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -361,7 +330,7 @@ CREATE TABLE `event_plan_participation` (
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `event_plan_participation_BEFORE_DELETE` BEFORE DELETE ON `event_plan_participation` FOR EACH ROW BEGIN
 SET SQL_SAFE_UPDATES = 0;
-	DELETE FROM `kvant`.`responsible_for_part_events` WHERE `id_event` = OLD.id;
+	DELETE FROM `kvantorium_schemas`.`responsible_for_part_events` WHERE `id_event` = OLD.id;
 SET SQL_SAFE_UPDATES = 1;
 END */;;
 DELIMITER ;
@@ -395,7 +364,6 @@ SET @saved_cs_client     = @@character_set_client;
 /*!50503 SET character_set_client = utf8mb4 */;
 /*!50001 CREATE VIEW `full_profile` AS SELECT 
  1 AS `id`,
- 1 AS `image`,
  1 AS `employee_id`,
  1 AS `name`,
  1 AS `date_of_birth`,
@@ -435,7 +403,7 @@ CREATE TABLE `groups` (
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `groups_BEFORE_DELETE` BEFORE DELETE ON `groups` FOR EACH ROW BEGIN
 Set SQL_SAFE_UPDATES = 0;
-delete From `kvant`.`students_groups` where students_groups.idGroup = Old.idGroups;
+delete From `kvantorium_schemas`.`students_groups` where students_groups.idGroup = Old.idGroups;
 Set SQL_SAFE_UPDATES = 1;
 END */;;
 DELIMITER ;
@@ -443,77 +411,6 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
-
---
--- Table structure for table `kniga`
---
-
-DROP TABLE IF EXISTS `kniga`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `kniga` (
-  `﻿id` int DEFAULT NULL,
-  `имя` text,
-  `фамилия` text,
-  `отчество` text,
-  `др` text,
-  `должность` int DEFAULT NULL,
-  `контактный телефон` text,
-  `размер` text,
-  `образование` text,
-  `график` text,
-  `пол` text
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `kvantum`
---
-
-DROP TABLE IF EXISTS `kvantum`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `kvantum` (
-  `id` int unsigned NOT NULL AUTO_INCREMENT,
-  `name` varchar(60) NOT NULL,
-  `discription` varchar(45) DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `kvantum_mentor`
---
-
-DROP TABLE IF EXISTS `kvantum_mentor`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `kvantum_mentor` (
-  `id_kvantum` int unsigned NOT NULL,
-  `id_mentor` int unsigned NOT NULL,
-  PRIMARY KEY (`id_kvantum`,`id_mentor`),
-  KEY `mentor_key_idx` (`id_mentor`),
-  CONSTRAINT `kvantum_key` FOREIGN KEY (`id_kvantum`) REFERENCES `kvantum` (`id`),
-  CONSTRAINT `mentor_key` FOREIGN KEY (`id_mentor`) REFERENCES `employees` (`id_employees`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `participants_for_part_event`
---
-
-DROP TABLE IF EXISTS `participants_for_part_event`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `participants_for_part_event` (
-  `id_event` int unsigned NOT NULL,
-  `id_student` int unsigned NOT NULL,
-  PRIMARY KEY (`id_event`,`id_student`),
-  KEY `student_key_idx` (`id_student`),
-  CONSTRAINT `e_key` FOREIGN KEY (`id_event`) REFERENCES `event_plan_participation` (`id`),
-  CONSTRAINT `s_key` FOREIGN KEY (`id_student`) REFERENCES `students` (`idStudent`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
 -- Table structure for table `pixels`
@@ -557,7 +454,7 @@ CREATE TABLE `position` (
   `name` varchar(150) NOT NULL,
   `discription` varchar(300) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -571,9 +468,9 @@ CREATE TABLE `profile` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `employee_id` int unsigned NOT NULL,
   `login` varchar(20) NOT NULL,
-  `password` varchar(200) NOT NULL,
+  `password_hash` varchar(200) NOT NULL,
   `access_level_id` int unsigned NOT NULL,
-  `image` longblob,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_UNIQUE` (`id`),
   UNIQUE KEY `login_UNIQUE` (`login`),
@@ -627,6 +524,46 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `profile_BEFORE_DELETE` BEFORE DELETE ON `profile` FOR EACH ROW BEGIN
+	DELETE FROM refresh_tokens
+    WHERE profile_id = OLD.id;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `refresh_tokens`
+--
+
+DROP TABLE IF EXISTS `refresh_tokens`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `refresh_tokens` (
+  `id_token` int unsigned NOT NULL AUTO_INCREMENT,
+  `profile_id` int unsigned NOT NULL,
+  `token` text,
+  `expires_at` datetime DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `revoked_at` datetime DEFAULT NULL,
+  `device_info` varchar(255) DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`id_token`),
+  KEY `profile_idx` (`profile_id`),
+  CONSTRAINT `profile_key` FOREIGN KEY (`profile_id`) REFERENCES `profile` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
 -- Table structure for table `rent`
@@ -704,20 +641,6 @@ DELIMITER ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
--- Table structure for table `responsible_for task`
---
-
-DROP TABLE IF EXISTS `responsible_for task`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `responsible_for task` (
-  `id_task` int NOT NULL,
-  `id_employee` int NOT NULL,
-  PRIMARY KEY (`id_task`,`id_employee`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `responsible_for_org_events`
 --
 
@@ -772,20 +695,6 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
-
---
--- Table structure for table `resumes`
---
-
-DROP TABLE IF EXISTS `resumes`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `resumes` (
-  `id` int unsigned NOT NULL,
-  `link` text,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
 -- Table structure for table `room`
@@ -878,7 +787,7 @@ DELIMITER ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `students_AFTER_INSERT` AFTER INSERT ON `students` FOR EACH ROW BEGIN
 Set SQL_SAFE_UPDATES = 0;
-INSERT INTO `kvant`.`pixels` (`id_student`) VALUES (new.idStudent);
+INSERT INTO `kvantorium_schemas`.`pixels` (`id_student`) VALUES (new.idStudent);
 Set SQL_SAFE_UPDATES = 1;
 END */;;
 DELIMITER ;
@@ -919,9 +828,9 @@ DELIMITER ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `students_BEFORE_DELETE` BEFORE DELETE ON `students` FOR EACH ROW BEGIN
 Set SQL_SAFE_UPDATES = 0;
-delete From `kvant`.`students_groups` where students_groups.idStudent = Old.idStudent;
-delete From `kvant`.`participants_for_part_event` where participants_for_part_event.id_student = Old.idStudent;
-delete From `kvant`.`pixels` where pixels.id_student = Old.idStudent;
+delete From `kvantorium_schemas`.`students_groups` where students_groups.idStudent = Old.idStudent;
+delete From `kvantorium_schemas`.`participants_for_part_event` where participants_for_part_event.id_student = Old.idStudent;
+delete From `kvantorium_schemas`.`pixels` where pixels.id_student = Old.idStudent;
 Set SQL_SAFE_UPDATES = 1;
 END */;;
 DELIMITER ;
@@ -944,23 +853,6 @@ CREATE TABLE `students_groups` (
   KEY `Group_idx` (`idGroup`),
   CONSTRAINT `Group` FOREIGN KEY (`idGroup`) REFERENCES `groups` (`idGroups`),
   CONSTRAINT `Student` FOREIGN KEY (`idStudent`) REFERENCES `students` (`idStudent`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `task_employee`
---
-
-DROP TABLE IF EXISTS `task_employee`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `task_employee` (
-  `id_task` int unsigned NOT NULL,
-  `id_employee` int unsigned NOT NULL,
-  PRIMARY KEY (`id_task`,`id_employee`),
-  KEY `emp_key_idx` (`id_employee`),
-  CONSTRAINT `emp_key` FOREIGN KEY (`id_employee`) REFERENCES `employees` (`id_employees`),
-  CONSTRAINT `task_key` FOREIGN KEY (`id_task`) REFERENCES `tasks` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1010,7 +902,7 @@ DELIMITER ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `tasks_BEFORE_DELETE` BEFORE DELETE ON `tasks` FOR EACH ROW BEGIN
 SET SQL_SAFE_UPDATES = 0;
-	DELETE FROM `kvant`.`task_employee` WHERE `id_task` = OLD.id;
+	DELETE FROM `kvantorium_schemas`.`task_employee` WHERE `id_task` = OLD.id;
 SET SQL_SAFE_UPDATES = 1;
 
 END */;;
@@ -1101,7 +993,7 @@ CREATE TABLE `weekday` (
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `add_document`(IN n VARCHAR(100), l VARCHAR(230))
 BEGIN
-	INSERT INTO `kvant`.`documents` (`name`, `link`) VALUES (n,l);
+	INSERT INTO `kvantorium_schemas`.`documents` (`name`, `link`) VALUES (n,l);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1120,9 +1012,9 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `add_employee`(in n varchar(45), s varchar(45), p varchar (45), d varchar(30), post int, c varchar(20), size varchar(10), e varchar(30), sch varchar(100), g varchar(1), kpi varchar (250), l varchar(20), pass varchar(200), id_a int)
 BEGIN
-INSERT INTO `kvant`.`employees` (`first_name`, `second_name`, `patronymic`, `date_of_birth`, 
+INSERT INTO `kvantorium_schemas`.`employees` (`first_name`, `second_name`, `patronymic`, `date_of_birth`, 
 `position`, `contact`, `size`, `education`, `schedule`, `gender`, `KPI`) VALUES (n, s, p, d, post, c, size, e, sch, g, kpi);
-INSERT INTO `kvant`.`profile` (`employee_id`, `login`, `password`, `access_level_id`) 
+INSERT INTO `kvantorium_schemas`.`profile` (`employee_id`, `login`, `password`, `access_level_id`) 
 VALUES ((SELECT LAST_INSERT_ID()), l, pass, id_a);
 END ;;
 DELIMITER ;
@@ -1142,7 +1034,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `add_resp_for_task`(IN i INT, r INT)
 BEGIN
-INSERT INTO `kvant`.`task_employee` (`id_task`, `id_employee`) VALUES (i, r);
+INSERT INTO `kvantorium_schemas`.`task_employee` (`id_task`, `id_employee`) VALUES (i, r);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1161,8 +1053,8 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `add_schedule`(in id_r int, id_g int, sT varchar(8), eT varchar(8), d int, id_e int)
 BEGIN
-INSERT INTO `kvant`.`schedule` (`group`, `startTime`, `endTime`, `day`) VALUES (id_g, sT, eT, d);
-INSERT INTO `kvant`.`employees_schedule` (`idEmployees`, `idSchedule`, `room`) 
+INSERT INTO `kvantorium_schemas`.`schedule` (`group`, `startTime`, `endTime`, `day`) VALUES (id_g, sT, eT, d);
+INSERT INTO `kvantorium_schemas`.`employees_schedule` (`idEmployees`, `idSchedule`, `room`) 
 VALUES (id_e, (SELECT LAST_INSERT_ID()), id_r);
 END ;;
 DELIMITER ;
@@ -1183,7 +1075,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `add_student`(sS varchar(40), nS varchar(30), pS varchar(35), b date, 
 n tinyint(1), sP varchar(40), nP varchar(30), pP varchar(35), e varchar(50), p varchar(18))
 BEGIN
-INSERT INTO `kvant`.`students` (`surnameStudent`, `nameStudent`,`patronymicStudent`, `birthdayStudent`,`navigator`, `surnameParent`,`nameParent`, `patronymicParent`,`E-mail`, `phone`) VALUES (sS, ns, ps, b, n, sP, nP, pP,e,p);
+INSERT INTO `kvantorium_schemas`.`students` (`surnameStudent`, `nameStudent`,`patronymicStudent`, `birthdayStudent`,`navigator`, `surnameParent`,`nameParent`, `patronymicParent`,`E-mail`, `phone`) VALUES (sS, ns, ps, b, n, sP, nP, pP,e,p);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1202,7 +1094,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `add_student_to _iv`(In i INT)
 BEGIN
-INSERT INTO `kvant`.`students_groups` (`idStudent`, `idGroup`) VALUES (i, '51');
+INSERT INTO `kvantorium_schemas`.`students_groups` (`idStudent`, `idGroup`) VALUES (i, '51');
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1222,7 +1114,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `add_student_to_group`(in i int, i_g int)
 BEGIN
 
-INSERT INTO `kvant`.`students_groups` (`idStudent`, `idGroup`) VALUES (i, i_g);
+INSERT INTO `kvantorium_schemas`.`students_groups` (`idStudent`, `idGroup`) VALUES (i, i_g);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1356,7 +1248,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `change_task_status`(IN i INT, in b TINYINT)
 BEGIN
-UPDATE `kvant`.`tasks` SET `done` = b WHERE (`id` = i);
+UPDATE `kvantorium_schemas`.`tasks` SET `done` = b WHERE (`id` = i);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1375,7 +1267,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `create_task`(IN d DATETIME, des VARCHAR(250), i INT)
 BEGIN
-INSERT INTO `kvant`.`tasks` (`task_deadline`, `description`, `id_creator`) VALUES (d, des, i);
+INSERT INTO `kvantorium_schemas`.`tasks` (`task_deadline`, `description`, `id_creator`) VALUES (d, des, i);
  SELECT LAST_INSERT_ID() as id;
 END ;;
 DELIMITER ;
@@ -1396,7 +1288,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_event_org`(IN i INT)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-DELETE FROM `kvant`.`event_plan_organization` WHERE (`id` = i);
+DELETE FROM `kvantorium_schemas`.`event_plan_organization` WHERE (`id` = i);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -1417,7 +1309,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_event_part`(IN i INT)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-DELETE FROM `kvant`.`event_plan_participation` WHERE (`id` = i);
+DELETE FROM `kvantorium_schemas`.`event_plan_participation` WHERE (`id` = i);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -1438,7 +1330,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_rent`(IN i INT)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-DELETE FROM `kvant`.`rent` WHERE (`id` = i);
+DELETE FROM `kvantorium_schemas`.`rent` WHERE (`id` = i);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -1459,7 +1351,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_responsible_org`(IN emp INT, eve INT)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-DELETE FROM `kvant`.`responsible_for_org_events` WHERE (`id_event` = eve) and (`id_employee` = emp);
+DELETE FROM `kvantorium_schemas`.`responsible_for_org_events` WHERE (`id_event` = eve) and (`id_employee` = emp);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -1480,7 +1372,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_responsible_part`(IN emp INT, eve INT)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-DELETE FROM `kvant`.`responsible_for_part_events` WHERE (`id_event` = eve) and (`id_employee` = emp);
+DELETE FROM `kvantorium_schemas`.`responsible_for_part_events` WHERE (`id_event` = eve) and (`id_employee` = emp);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -1501,7 +1393,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_schedule`(in id int )
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-DELETE FROM `kvant`.`schedule` WHERE (`idlesson` = id);
+DELETE FROM `kvantorium_schemas`.`schedule` WHERE (`idlesson` = id);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -1522,7 +1414,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_student_from_group`(in i int, i_g int)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-DELETE FROM `kvant`.`students_groups` WHERE idStudent = i and idGroup = i_g;
+DELETE FROM `kvantorium_schemas`.`students_groups` WHERE idStudent = i and idGroup = i_g;
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -1543,7 +1435,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_student_to_group`(in i int, i_g int)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-DELETE FROM `kvant`.`students_groups` WHERE idStudent = i and idGroup = i_g;
+DELETE FROM `kvantorium_schemas`.`students_groups` WHERE idStudent = i and idGroup = i_g;
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -1564,7 +1456,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `delete_task`(IN i INT)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-DELETE FROM `kvant`.`tasks` WHERE (`id` = i);
+DELETE FROM `kvantorium_schemas`.`tasks` WHERE (`id` = i);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -1686,7 +1578,7 @@ BEGIN
 SELECT  s.surnameStudent, s.nameStudent, s.patronymicStudent, p.part_of_comp, p.make_content, p.invite_friend, p.clean_kvantum, p.filled_project_card_on_time, 
 p.finished_project_with_product, p.regional_competition, p.interregional_competition, p.all_russian_competition,
 p.international_competition, p.nto, p.become_an_engineering_volunteer, p.help_with_event, p.make_own_event, 
-p.special_achievements, p.fine FROM kvant.pixels p,  students s where p.id_student=s.idStudent;
+p.special_achievements, p.fine FROM kvantorium_schemas.pixels p,  students s where p.id_student=s.idStudent;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -2636,7 +2528,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `get_org_resp_table`()
 BEGIN
-SELECT * FROM kvant.responsible_for_org_events;
+SELECT * FROM kvantorium_schemas.responsible_for_org_events;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -2772,7 +2664,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `get_part_resp_table`()
 BEGIN
-SELECT * FROM kvant.responsible_for_part_events;
+SELECT * FROM kvantorium_schemas.responsible_for_part_events;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -3331,7 +3223,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `get_table_students_group`()
 BEGIN
-SELECT * FROM kvant.students_groups;
+SELECT * FROM kvantorium_schemas.students_groups;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -3399,7 +3291,7 @@ THEN
 	UPDATE `attendance` SET `presence` = p
         WHERE `id_student` = s AND `id_group` = g AND`date_of_lesson` = d;
 ELSE
-	INSERT INTO `kvant`.`attendance` (`id_student`, `id_group`, `date_of_lesson`, `presence`) VALUES (s, g, d, p);
+	INSERT INTO `kvantorium_schemas`.`attendance` (`id_student`, `id_group`, `date_of_lesson`, `presence`) VALUES (s, g, d, p);
 END IF;
 END ;;
 DELIMITER ;
@@ -3419,7 +3311,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `new_event_org`(IN n VARCHAR(110), foh VARCHAR(60), dates VARCHAR(110), days VARCHAR(23), aa INT, aap INT, an TEXT, r VARCHAR(110))
 BEGIN
-INSERT INTO `kvant`.`event_plan_organization` (`name`, `form_of_holding`, `dates_of_event`, `day_of_the_week`, `amount_of_applications`, 
+INSERT INTO `kvantorium_schemas`.`event_plan_organization` (`name`, `form_of_holding`, `dates_of_event`, `day_of_the_week`, `amount_of_applications`, 
 `amount_of_planning_application`, `annotation`, `result`) VALUES (n, foh, dates, days, aa, aap, an, r);
 SELECT LAST_INSERT_ID() as id;
 END ;;
@@ -3440,7 +3332,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `new_event_part`(IN n VARCHAR(110), foh INT, lvl INT, rd VARCHAR(60), p VARCHAR(210), r VARCHAR(180), a TEXT, d VARCHAR(110), l TEXT, pa INT, wa INT, rua INT)
 BEGIN
-INSERT INTO `kvant`.`event_plan_participation` (`name`, `form_of_holding`, `id_type`, `registration_deadline`, 
+INSERT INTO `kvantorium_schemas`.`event_plan_participation` (`name`, `form_of_holding`, `id_type`, `registration_deadline`, 
 `participants_and_works`, `result`, `annotation`, `dates_of_event`, `link`, `participants_amount`, `winner_amount`, `runner_up_amount`) VALUES (n, foh, lvl, rd, p, r, a, d, l, pa, wa, rua);
 SELECT LAST_INSERT_ID() as id;
 END ;;
@@ -3461,7 +3353,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `new_event_part_v3`(IN n VARCHAR(110), foh INT, lvl INT, rd VARCHAR(60), p VARCHAR(210),  a TEXT, d VARCHAR(110), l TEXT, pa INT, wa INT, rua INT)
 BEGIN
-INSERT INTO `kvant`.`event_plan_participation` (`name`, `form_of_holding`, `id_type`, `registration_deadline`, 
+INSERT INTO `kvantorium_schemas`.`event_plan_participation` (`name`, `form_of_holding`, `id_type`, `registration_deadline`, 
 `participants_and_works`, `annotation`, `dates_of_event`, `link`, `participants_amount`, `winner_amount`, `runner_up_amount`) VALUES (n, foh, lvl, rd, p, a, d, l, pa, wa, rua);
 SELECT LAST_INSERT_ID() as id;
 END ;;
@@ -3501,7 +3393,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `new_rent`(IN e INT, r INT, d DATE, st TIME, et TIME)
 BEGIN
-	INSERT INTO `kvant`.`rent` (`id_event`, `id_room`, `date`, `start_time`, `end_time`) VALUES (e, r, d, st, et);
+	INSERT INTO `kvantorium_schemas`.`rent` (`id_event`, `id_room`, `date`, `start_time`, `end_time`) VALUES (e, r, d, st, et);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -3520,7 +3412,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `new_responsible_org`(IN emp INT, eve INT)
 BEGIN
-INSERT INTO `kvant`.`responsible_for_org_events` (`id_employee`, `id_event`) VALUES (emp, eve);
+INSERT INTO `kvantorium_schemas`.`responsible_for_org_events` (`id_employee`, `id_event`) VALUES (emp, eve);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -3539,7 +3431,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `new_responsible_part`(IN emp INT, eve INT)
 BEGIN
-INSERT INTO `kvant`.`responsible_for_part_events` (`id_event`, `id_employee`) VALUES (eve, emp);
+INSERT INTO `kvantorium_schemas`.`responsible_for_part_events` (`id_event`, `id_employee`) VALUES (eve, emp);
 
 END ;;
 DELIMITER ;
@@ -3620,7 +3512,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `set_contact`(IN i INT, IN c VARCHAR(20))
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-	UPDATE `kvant`.`employees` SET `contact` = c WHERE (`id_employees` = i);
+	UPDATE `kvantorium_schemas`.`employees` SET `contact` = c WHERE (`id_employees` = i);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -3640,7 +3532,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `set_KPI_to employee`(IN i INT, k VARCHAR(250))
 BEGIN
-UPDATE `kvant`.`employees` SET `KPI` = k WHERE (`id_employees` = i);
+UPDATE `kvantorium_schemas`.`employees` SET `KPI` = k WHERE (`id_employees` = i);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -3659,7 +3551,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `set_KPI_to_employee`(IN i INT, k VARCHAR(250))
 BEGIN
-UPDATE `kvant`.`employees` SET `KPI` = k WHERE (`id_employees` = i);
+UPDATE `kvantorium_schemas`.`employees` SET `KPI` = k WHERE (`id_employees` = i);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -3679,7 +3571,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `set_size`(In i INT, s VARCHAR(20))
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-	UPDATE `kvant`.`employees` SET `size` = s WHERE (`id_employees` = i);
+	UPDATE `kvantorium_schemas`.`employees` SET `size` = s WHERE (`id_employees` = i);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -3701,7 +3593,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `update_event_org`(IN i INT, n VARCH
  aap INT, an TEXT, r VARCHAR(110))
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-UPDATE `kvant`.`event_plan_organization` SET `name` = n, `form_of_holding` = foh, `dates_of_event` = dates,
+UPDATE `kvantorium_schemas`.`event_plan_organization` SET `name` = n, `form_of_holding` = foh, `dates_of_event` = dates,
  `day_of_the_week` = days, `amount_of_applications` = aa, `amount_of_planning_application` = aap, `annotation` = an, 
  `result` = r WHERE (`id` = i);
 
@@ -3725,7 +3617,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `update_event_part`(IN i INT, n VARCHAR(110), foh INT, lvl INT, rd VARCHAR(60), p VARCHAR(210), r VARCHAR(180), a TEXT, d VARCHAR(110), l TEXT, pa INT, wa INT, rua INT)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-UPDATE `kvant`.`event_plan_participation` SET `name` = n, `form_of_holding` = foh, `id_type` = lvl, `registration_deadline` = rd, 
+UPDATE `kvantorium_schemas`.`event_plan_participation` SET `name` = n, `form_of_holding` = foh, `id_type` = lvl, `registration_deadline` = rd, 
  `participants_and_works` = p, `result` = r, `annotation` = a, `dates_of_event` = d, `link` = l, `participants_amount` = pa, `winner_amount` = wa, `runner_up_amount` = rua
  WHERE (`id` = i);
 SET SQL_SAFE_UPDATES = 1;
@@ -3748,7 +3640,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `update_event_part_new`(IN i INT, n VARCHAR(110), foh INT, lvl INT, rd VARCHAR(60), p VARCHAR(210), a TEXT, d VARCHAR(110), l TEXT, pa INT, wa INT, rua INT)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-UPDATE `kvant`.`event_plan_participation` SET `name` = n, `form_of_holding` = foh, `id_type` = lvl, `registration_deadline` = rd, 
+UPDATE `kvantorium_schemas`.`event_plan_participation` SET `name` = n, `form_of_holding` = foh, `id_type` = lvl, `registration_deadline` = rd, 
  `participants_and_works` = p, `annotation` = a, `dates_of_event` = d, `link` = l, `participants_amount` = pa, `winner_amount` = wa, `runner_up_amount` = rua
  WHERE (`id` = i);
 SET SQL_SAFE_UPDATES = 1;
@@ -3770,7 +3662,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `update_mark`(IN id_e INT, id_emp INT, m tinyint)
 BEGIN
-	UPDATE `kvant`.`responsible_for_part_events` SET `mark_of_sending_an_application` = m WHERE (`id_event` = id_e and `id_employee`=id_emp);
+	UPDATE `kvantorium_schemas`.`responsible_for_part_events` SET `mark_of_sending_an_application` = m WHERE (`id_event` = id_e and `id_employee`=id_emp);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -3790,7 +3682,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `update_pixels_for_student`(IN id INT, poc int, mc int, ifriend int, ck int, fpcot int,fpwp int, rc int, irc int, arc int, inc int,
  nto int, ev int, hwe int, moe int, sa int, fine int)
 BEGIN
-UPDATE `kvant`.`pixels` SET `part_of_comp` = poc, `make_content` = mc, `invite_friend` = ifriend, `clean_kvantum` = ck, `filled_project_card_on_time` = fpcot, `finished_project_with_product` = fpwp,
+UPDATE `kvantorium_schemas`.`pixels` SET `part_of_comp` = poc, `make_content` = mc, `invite_friend` = ifriend, `clean_kvantum` = ck, `filled_project_card_on_time` = fpcot, `finished_project_with_product` = fpwp,
  `regional_competition` = rc, `interregional_competition` = irc, `all_russian_competition` = arc, `international_competition` = inc, 
  `nto` = nto, `become_an_engineering_volunteer` = ev, `help_with_event` = hwe, `make_own_event` = moe, `special_achievements` = sa, 
  `fine` = fine WHERE (`id_student` = id);
@@ -3813,7 +3705,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `update_rent`(In i INT, e INT, r INT, d DATE, st TIME, et TIME)
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-	UPDATE `kvant`.`rent` SET `id_event` = e,`id_room` = r, `date` = d, `start_time` = st, `end_time` = et WHERE (`id` = i);
+	UPDATE `kvantorium_schemas`.`rent` SET `id_event` = e,`id_room` = r, `date` = d, `start_time` = st, `end_time` = et WHERE (`id` = i);
 SET SQL_SAFE_UPDATES = 1;
 END ;;
 DELIMITER ;
@@ -3833,7 +3725,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `update_result`(IN id_e INT, id_emp INT, r VARCHAR(250))
 BEGIN
-	UPDATE `kvant`.`responsible_for_part_events` SET `result_of_responsible` = r WHERE (`id_event` = id_e and `id_employee`=id_emp);
+	UPDATE `kvantorium_schemas`.`responsible_for_part_events` SET `result_of_responsible` = r WHERE (`id_event` = id_e and `id_employee`=id_emp);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -3852,8 +3744,8 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `update_schedule`(in id int, id_r int, id_g int, sT varchar(8), eT varchar(8))
 BEGIN
-Update `kvant`.`schedule`  set `group` = id_g, `startTime`= sT, `endTime`=eT where idlesson = id;
-Update `kvant`.`employees_schedule` set room = id_r where idSchedule = id;
+Update `kvantorium_schemas`.`schedule`  set `group` = id_g, `startTime`= sT, `endTime`=eT where idlesson = id;
+Update `kvantorium_schemas`.`employees_schedule` set room = id_r where idSchedule = id;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -3874,7 +3766,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `update_student`(in i int, sS varcha
 n tinyint(1), sP varchar(40), nP varchar(30), pP varchar(35), e varchar(50), p varchar(18))
 BEGIN
 SET SQL_SAFE_UPDATES = 0;
-UPDATE `kvant`.`students` SET `surnameStudent` = sS, `nameStudent` = nS, `patronymicStudent` = pS,
+UPDATE `kvantorium_schemas`.`students` SET `surnameStudent` = sS, `nameStudent` = nS, `patronymicStudent` = pS,
  `birthdayStudent` = b, `navigator` = n, `surnameParent` = sP, `nameParent` = nP, `patronymicParent` = pP,
  `E-mail` = e, `phone` = p WHERE (`idStudent` = i);
 SET SQL_SAFE_UPDATES = 1;
@@ -3896,7 +3788,7 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `update_student_to_group`(in i int, i_g1 int, i_g2 int)
 BEGIN
-	UPDATE `kvant`.`students_groups` SET idGroup = i_g2 WHERE idStudent = i and idGroup = i_g1;
+	UPDATE `kvantorium_schemas`.`students_groups` SET idGroup = i_g2 WHERE idStudent = i and idGroup = i_g1;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -3917,7 +3809,7 @@ DELIMITER ;
 /*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `full_profile` AS select `p`.`id` AS `id`,`p`.`image` AS `image`,`p`.`employee_id` AS `employee_id`,concat(`e`.`second_name`,' ',`e`.`first_name`,' ',`e`.`patronymic`) AS `name`,`e`.`date_of_birth` AS `date_of_birth`,`pos`.`name` AS `position`,`e`.`contact` AS `contact`,`e`.`size` AS `size`,`e`.`education` AS `education`,`e`.`schedule` AS `schedule`,`e`.`gender` AS `gender` from ((`profile` `p` join `employees` `e`) join `position` `pos`) where ((`p`.`employee_id` = `e`.`id_employees`) and (`pos`.`id` = `e`.`position`)) */;
+/*!50001 VIEW `full_profile` AS select `p`.`id` AS `id`,`p`.`employee_id` AS `employee_id`,concat(`e`.`second_name`,' ',`e`.`first_name`,' ',`e`.`patronymic`) AS `name`,`e`.`date_of_birth` AS `date_of_birth`,`pos`.`name` AS `position`,`e`.`contact` AS `contact`,`e`.`size` AS `size`,`e`.`education` AS `education`,`e`.`schedule` AS `schedule`,`e`.`gender` AS `gender` from ((`profile` `p` join `employees` `e`) join `position` `pos`) where ((`p`.`employee_id` = `e`.`id_employees`) and (`pos`.`id` = `e`.`position`)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -3949,4 +3841,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-12-26 16:28:29
+-- Dump completed on 2026-02-16 13:06:37
