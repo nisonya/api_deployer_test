@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { getPool } = require('../../db/connection');
+const { getPool } = require('../../../db/connection');
 
+// POST /api/auth/login
 router.post('/login', async (req, res) => {
   const { login, password } = req.body;
 
@@ -14,57 +15,56 @@ router.post('/login', async (req, res) => {
   try {
     const pool = await getPool();
     const [rows] = await pool.query(
-      'SELECT id_employees, password_hash, role, is_active FROM employees WHERE login = ?',
+      'SELECT id, password_hash, access_level_id FROM profile WHERE login = ?',
       [login]
     );
 
-    if (rows.length === 0 || rows[0].is_active === 0) {
-      return res.status(401).json({ error: 'Неверный логин или пользователь заблокирован' });
+    if (rows.length === 0) {
+      return res.status(401).json({ error: 'Неверный логин или пароль' });
     }
 
     const user = rows[0];
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
+
     if (!isMatch) {
-      return res.status(401).json({ error: 'Неверный пароль' });
+      return res.status(401).json({ error: 'Неверный логин или пароль' });
     }
 
-    // Access token — короткий, 1 час
     const accessToken = jwt.sign(
-      { userId: user.id_employees, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
+      { 
+        userId: user.id, 
+        accessLevel: user.access_level_id 
+      },
+      process.env.JWT_ACCESS_SECRET,
+      { expiresIn: '1h' }
     );
 
-    // Refresh token — длинный, 7 дней
     const refreshToken = jwt.sign(
-      { userId: user.id_employees },
+      { userId: user.id },
       process.env.JWT_REFRESH_SECRET,
-      { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
+      { expiresIn: '7d' }
     );
 
-    // Сохраняем refresh в БД
-    await pool.query(
-      'INSERT INTO refresh_tokens (employee_id, token, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY))',
-      [user.id_employees, refreshToken]
-    );
 
-    // Для Electron — устанавливаем HttpOnly cookie
-    res.cookie('token', accessToken, {
+await pool.query(
+  'INSERT INTO refresh_tokens (profile_id, token, expires_at, device_info, ip_address) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), ?, ?)',
+  [user.id, refreshToken, req.headers['user-agent'] || 'unknown', req.ip || 'unknown']
+);
+    res.cookie('access_token', accessToken, {
       httpOnly: true,
-      secure: true, // только HTTPS
+      secure: true,
       sameSite: 'strict',
-      maxAge: 3600 * 1000 // 1 час
+      maxAge: 3600 * 1000
     });
 
-    // Возвращаем оба токена (для мобильного клиента)
     res.json({
       success: true,
       accessToken,
-      refreshToken,
-      user: {
-        id: user.id_employees,
-        role: user.role
+      refreshToken, 
+      user: { 
+        id: user.id, 
+        accessLevel: user.access_level_id 
       }
     });
   } catch (err) {
@@ -73,51 +73,50 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// POST /api/auth/refresh
 router.post('/refresh', async (req, res) => {
   const { refreshToken } = req.body;
 
   if (!refreshToken) {
-    return res.status(400).json({ error: 'Refresh token обязателен' });
+    return res.status(401).json({ error: 'Требуется refresh-токен' });
   }
 
   try {
-    // Проверяем подпись refresh-токена
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
     const pool = await getPool();
-
-    // Проверяем, существует ли токен в БД и не отозван ли
-    const [tokenRows] = await pool.query(
+    const [rows] = await pool.query(
       'SELECT * FROM refresh_tokens WHERE token = ? AND expires_at > NOW() AND revoked_at IS NULL',
       [refreshToken]
     );
 
-    if (tokenRows.length === 0) {
-      return res.status(401).json({ error: 'Недействительный или истёкший refresh token' });
+    if (rows.length === 0) {
+      return res.status(401).json({ error: 'Недействительный или просроченный refresh-токен' });
     }
 
-    // Проверяем, что пользователь активен
+    const profileId = rows[0].profile_id;
+
     const [userRows] = await pool.query(
-      'SELECT id_employees, role, is_active FROM employees WHERE id_employees = ?',
-      [decoded.userId]
+      'SELECT id, access_level_id FROM profile WHERE id = ?',
+      [profileId]
     );
 
-    if (userRows.length === 0 || userRows[0].is_active === 0) {
-      return res.status(401).json({ error: 'Пользователь не найден или заблокирован' });
+    if (userRows.length === 0) {
+      return res.status(401).json({ error: 'Профиль не найден' });
     }
 
     const user = userRows[0];
 
-    // Генерируем новый access token
     const newAccessToken = jwt.sign(
-      { userId: user.id_employees, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
+      { 
+        userId: user.id, 
+        accessLevel: user.access_level_id 
+      },
+      process.env.JWT_ACCESS_SECRET,
+      { expiresIn: '1h' }
     );
 
-    // Можно выдать новый refresh (ротация), но для простоты оставляем старый
-
-    res.cookie('token', newAccessToken, {
+    res.cookie('access_token', newAccessToken, {
       httpOnly: true,
       secure: true,
       sameSite: 'strict',
@@ -126,10 +125,12 @@ router.post('/refresh', async (req, res) => {
 
     res.json({ success: true, accessToken: newAccessToken });
   } catch (err) {
-    res.status(401).json({ error: 'Недействительный refresh token' });
+    console.error('Ошибка рефреша:', err);
+    res.status(401).json({ error: 'Недействительный refresh-токен' });
   }
 });
 
+// POST /api/auth/logout
 router.post('/logout', async (req, res) => {
   const { refreshToken } = req.body;
 
@@ -141,8 +142,8 @@ router.post('/logout', async (req, res) => {
     );
   }
 
-  res.clearCookie('token');
-  res.json({ success: true, message: 'Выход выполнен' });
+  res.clearCookie('access_token');
+  res.json({ success: true });
 });
 
 module.exports = router;
