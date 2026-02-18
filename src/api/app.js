@@ -7,20 +7,37 @@ const path = require('path');
 const { deploy } = require('../db/deploy');
 const { getDbConfig} = require('../common/config');
 const app = express();
-
 app.use(express.json());
 app.use(cookieParser());
-
-// Монтируем модули (добавляй по мере готовностSи)
-//app.use('/api/auth', require('./modules/auth/routes'));
-app.use('/api/employees', require('./modules/employees/routes'));
-app.use('/api/events', require('./modules/events/routes'));
-app.use('/api/schedule', require('./modules/schedule/routes'));
-
+const authMiddleware = require('./middleware/auth');
+const authRoutes = require('./modules/auth/routes');
+app.use('/api/auth', authRoutes);
+app.use('/api/employees', authMiddleware, require('./modules/employees/routes'));
+app.use('/api/events',authMiddleware, require('./modules/events/routes'));
+app.use('/api/schedule',authMiddleware, require('./modules/schedule/routes'));
+app.use(require('./middleware/errorHandler'));
 // Корневой эндпоинт для проверки
 app.get('/', (req, res) => res.send('API work'));
 let server = null;
 
+app.use((err, req, res, next) => {
+  console.error('Global error:', {
+    message: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method
+  });
+
+  const status = err.status || 500;
+  const message = status === 500 
+    ? 'Server error. Try again later.'
+    : err.message || 'Error';
+
+  res.status(status).json({
+    success: false,
+    error: message
+  });
+});
 async function startApi(port = 3000) {
   await deploy();
 

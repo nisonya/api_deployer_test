@@ -2,6 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const { getAdminPool } = require('./connection');
 const { getDbConfig } = require('../common/config');
+const bcrypt = require('bcryptjs');
 
 async function deploy() {
   const pool = await getAdminPool();
@@ -53,7 +54,7 @@ await conn.query('SET FOREIGN_KEY_CHECKS=0;');
     }
 
     await conn.query('SET FOREIGN_KEY_CHECKS=1;');
-
+    initRootUser();
     console.log('schema deployed sucssesfully');
   } catch (err) {
     console.error('Deploy error:', err);
@@ -62,5 +63,23 @@ await conn.query('SET FOREIGN_KEY_CHECKS=0;');
     conn.release();
   }
 }
+async function initRootUser() {
+  const pool = await getPool();
+  const [rows] = await pool.query('SELECT COUNT(*) as count FROM profile');
 
-module.exports = { deploy };
+  if (rows[0].count === 0) {
+    const defaultLogin = 'root';
+    const defaultPassword = 'initial123'; // Изменить после первого логина!
+    const hash = await bcrypt.hash(defaultPassword, 12);
+    const defaultAccessLevel = 1; // Админ-уровень
+
+    await pool.query(
+      'INSERT INTO profile (login, password_hash, access_level_id) VALUES (?, ?, ?)',
+      [defaultLogin, hash, defaultAccessLevel]
+    );
+
+    console.log('Создан root-аккаунт: login: root, password: initial123. Смените пароль!');
+  }
+}  
+
+module.exports = { deploy};

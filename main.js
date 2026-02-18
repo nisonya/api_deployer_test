@@ -6,7 +6,8 @@ const { createMainWindow, createSetupWindow} = require('./src/main/windows');
 let mainWindow = null;
 
 app.whenReady().then(async () => {
-  
+  const bcrypt = require('bcryptjs');
+console.log(bcrypt.hashSync('12345', 1));
   require('./src/main/ipcHandlers').registerHandlers(mainWindow);
   if (!(await isConfigured())) {
     createSetupWindow();
