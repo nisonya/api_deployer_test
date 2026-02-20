@@ -14,7 +14,9 @@
     "test:async": "vitest run",
     "test:async:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:all": "npm run test:sync && npm run test:async"
+    "test:all": "npm run test:sync && npm run test:async",
+    "test:auth": "jest tests/api/auth.test.js",
+    "test:preload": "jest tests/preload.test.js"
   },
   "build": {
     "appId": "com.yourcompany.yourapp",
