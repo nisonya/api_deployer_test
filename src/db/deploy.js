@@ -1,6 +1,6 @@
 const fs = require('fs').promises;
 const path = require('path');
-const { getAdminPool } = require('./connection');
+const { getAdminPool, getPool } = require('./connection');
 const { getDbConfig } = require('../common/config');
 const bcrypt = require('bcryptjs');
 
