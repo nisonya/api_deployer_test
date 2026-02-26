@@ -4,7 +4,6 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { getPool } = require('../../../db/connection');
 
-// POST /api/auth/login
 router.post('/login', async (req, res) => {
   const { login, password } = req.body;
 
@@ -73,7 +72,6 @@ await pool.query(
   }
 });
 
-// POST /api/auth/refresh
 router.post('/refresh', async (req, res) => {
   const { refreshToken } = req.body;
 
@@ -130,7 +128,6 @@ router.post('/refresh', async (req, res) => {
   }
 });
 
-// POST /api/auth/logout
 router.post('/logout', async (req, res) => {
   const { refreshToken } = req.body;
 
