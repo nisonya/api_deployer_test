@@ -13,31 +13,21 @@ const authMiddleware = require('./middleware/auth');
 const authRoutes = require('./modules/auth/routes');
 app.use('/api/auth', authRoutes);
 app.use('/api/employees', authMiddleware, require('./modules/employees/routes'));
-app.use('/api/events',authMiddleware, require('./modules/events/routes'));
-app.use('/api/schedule',authMiddleware, require('./modules/schedule/routes'));
-app.use(require('./middleware/errorHandler'));
+app.use('/api/events', authMiddleware, require('./modules/events/routes'));
+app.use('/api/schedule', authMiddleware, require('./modules/schedule/routes'));
+app.use('/api/reference', authMiddleware, require('./modules/reference/routes'));
+app.use('/api/rent', authMiddleware, require('./modules/rent/routes'));
+app.use('/api/students', authMiddleware, require('./modules/students/routes'));
+app.use('/api/attendance', authMiddleware, require('./modules/attendance/routes'));
+app.use('/api/groups', authMiddleware, require('./modules/groups/routes'));
+
 // Корневой эндпоинт для проверки
 app.get('/', (req, res) => res.send('API work'));
+
+// Обработчик ошибок — последний в цепочке (вызывается при next(err))
+app.use(require('./middleware/errorHandler'));
+
 let server = null;
-
-app.use((err, req, res, next) => {
-  console.error('Global error:', {
-    message: err.message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method
-  });
-
-  const status = err.status || 500;
-  const message = status === 500 
-    ? 'Server error. Try again later.'
-    : err.message || 'Error';
-
-  res.status(status).json({
-    success: false,
-    error: message
-  });
-});
 async function startApi(port = 3000) {
   await deploy();
 

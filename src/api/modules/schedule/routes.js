@@ -1,24 +1,16 @@
 const express = require('express');
 const router = express.Router();
+const controller = require('./controller');
 
-// GET /api/events/organization
-router.get('/', (req, res) => {
-  // логика
-  res.json({ success: true, data: 'schedule ' });
-});
-
-// POST /api/events/participation
-router.post('/', (req, res) => {
-  const { schedule_id, time} = req.body;
-  if (!schedule_id || !time) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'time и schedule_id обязательны' 
-    });
-  }
-  res.status(201).json({ success: true });
-});
-
-// ... все методы для events здесь
+router.get('/', controller.getSchedule);
+router.get('/teachers', controller.getTeachers);
+router.get('/groups', controller.getGroups);
+router.post('/by-date', controller.getScheduleByDate);
+router.get('/by-teacher/:id', controller.getScheduleByTeacher);
+router.get('/by-group/:id', controller.getScheduleByGroup);
+router.get('/by-room/:id', controller.getScheduleByRoom);
+router.post('/', controller.addSchedule);
+router.put('/', controller.updateSchedule);
+router.delete('/:id', controller.deleteSchedule);
 
 module.exports = router;
