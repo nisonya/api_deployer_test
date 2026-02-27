@@ -1,31 +1,102 @@
-const { ipcMain, dialog } = require('electron');
 const { startApi, stopApi } = require('../api/app');
 const { getDbConfig, setDbConfig, updateApiPort } = require('../common/config');
 const { getPool } = require('../db/connection');
-const { getApiServer, setApiServer } = require('./state');
-const { createSetupWindow, createBackupWindow} = require('./windows');
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
 
+/** Экспорт БД в SQL-файл. Без Electron — путь передаётся явно. onProgress(0..100) — опционально. */
+async function exportSeed(filePath, onProgress) {
+  if (!filePath) return { success: false, message: 'Не указан путь к файлу' };
+  let conn = null;
+  try {
+    const pool = await getPool();
+    conn = await pool.getConnection();
+    if (onProgress) onProgress(0);
+    const [tables] = await conn.query('SHOW TABLES');
+    let dump = '-- Kvant seed dump\n\n';
+    const total = tables.length;
+    let processed = 0;
+    for (const table of tables) {
+      const tableName = Object.values(table)[0];
+      const [rows] = await conn.query(`SELECT * FROM \`${tableName}\``);
+      if (rows.length > 0) {
+        const columns = Object.keys(rows[0]);
+        for (const row of rows) {
+          const values = columns.map(col => conn.escape(row[col])).join(', ');
+          dump += `INSERT INTO \`${tableName}\` (\`${columns.join('`, `')}\`) VALUES (${values});\n`;
+        }
+        dump += '\n';
+      }
+      processed++;
+      if (onProgress) onProgress(Math.round((processed / total) * 100));
+    }
+    await fs.writeFile(filePath, dump, 'utf8');
+    if (onProgress) onProgress(100);
+    return { success: true, filePath };
+  } catch (err) {
+    return { success: false, message: err.message };
+  } finally {
+    if (conn) conn.release();
+  }
+}
+
+/** Импорт БД из SQL-файла (только INSERT). Без Electron — путь передаётся явно. onProgress(0..100) — опционально. */
+async function importSeed(filePath, onProgress) {
+  if (!filePath) return { success: false, message: 'Не указан путь к файлу' };
+  let conn = null;
+  try {
+    const sql = await fs.readFile(filePath, 'utf8');
+    const lines = sql.split('\n');
+    const insertLines = lines
+      .map(line => line.trim())
+      .filter(line => line.toUpperCase().startsWith('INSERT INTO'))
+      .filter(line => line.endsWith(';'));
+    if (insertLines.length === 0) {
+      return { success: false, message: 'В файле не найдено ни одного INSERT-запроса' };
+    }
+    if (onProgress) onProgress(0);
+    const pool = await getPool();
+    conn = await pool.getConnection();
+    await conn.query('SET FOREIGN_KEY_CHECKS = 0;');
+    let processed = 0;
+    const total = insertLines.length;
+    for (const query of insertLines) {
+      try {
+        await conn.query(query);
+        processed++;
+        if (onProgress) onProgress(Math.round((processed / total) * 100));
+        await new Promise(resolve => setImmediate(resolve));
+      } catch (queryErr) {
+        console.error(`Ошибка в запросе: ${query.substring(0, 100)}...`, queryErr.message);
+      }
+    }
+    await conn.query('SET FOREIGN_KEY_CHECKS = 1;');
+    if (onProgress) onProgress(100);
+    return { success: true, processedInserts: processed };
+  } catch (err) {
+    return { success: false, message: err.message || 'Неизвестная ошибка при импорте' };
+  } finally {
+    if (conn) conn.release();
+  }
+}
+
 function registerHandlers(mainWindow) {
-  
-  ipcMain.handle('get-api-status', () => ({ running: !!getApiServer() })); 
-   ipcMain.handle('get-db-config', async () => {
-    const config = await getDbConfig();
-    return config ? {
-      host: config.host,
-      port: config.port,
-      user: config.user,
-      database: config.database,
-      apiPort: config.apiPort
-    } : null;
-  });
+  const { ipcMain, dialog } = require('electron');
+  const { getApiServer, setApiServer } = require('./state');
+  const { createSetupWindow, createBackupWindow } = require('./windows');
+
+  function safeDbConfig(config) {
+    return config ? { host: config.host, port: config.port, user: config.user, database: config.database, apiPort: config.apiPort } : null;
+  }
+
+  ipcMain.handle('get-api-status', () => ({ running: !!getApiServer() }));
+
+  ipcMain.handle('get-db-config', async () => safeDbConfig(await getDbConfig()));
   ipcMain.handle('start-api', async () => {
     if (getApiServer()) return { success: false, message: 'API is running' };
-
     try {
       const config = await getDbConfig();
-      const apiPort = config?.apiPort || 3000;
+      const apiPort = config?.apiPort ?? 3000;
       const server = await startApi(apiPort);
       setApiServer(server);
       return { success: true, message: 'API is running' };
@@ -42,7 +113,7 @@ function registerHandlers(mainWindow) {
   });
 
 
-  ipcMain.handle('test-db-connection', async (event, config) => {
+  ipcMain.handle('test-db-connection', async (_event, config) => {
     try {
       const mysql = require('mysql2/promise');
       const testPool = mysql.createPool({
@@ -63,11 +134,11 @@ function registerHandlers(mainWindow) {
     }
   });
 
-  ipcMain.handle('save-db-config', async (event, config) => {
+  ipcMain.handle('save-db-config', async (_event, config) => {
     await setDbConfig(config);
     return { success: true };
   });
-  ipcMain.handle('update-api-port', async (event, apiPort) => {
+  ipcMain.handle('update-api-port', async (_event, apiPort) => {
     try {
       await updateApiPort(apiPort);
       return { success: true };
@@ -75,122 +146,24 @@ function registerHandlers(mainWindow) {
       return { success: false, message: err.message };
     }
   });
- ipcMain.handle('export-seed', async (event) => {
-  const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
-    defaultPath: `kvant-seed-${new Date().toISOString().slice(0,10)}.sql`,
-    filters: [{ name: 'SQL Files', extensions: ['sql'] }]
+  ipcMain.handle('export-seed', async (event) => {
+    const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+      defaultPath: `kvant-seed-${new Date().toISOString().slice(0, 10)}.sql`,
+      filters: [{ name: 'SQL Files', extensions: ['sql'] }]
+    });
+    if (canceled || !filePath) return { success: false, message: 'Отменено' };
+    const onProgress = (p) => event.sender.send('export-progress', p);
+    return exportSeed(filePath, onProgress);
   });
 
-  if (canceled || !filePath) return { success: false, message: 'Отменено' };
-
-  let conn = null;
-  try {
-    const pool = await getPool();
-    conn = await pool.getConnection();
-    event.sender.send('export-progress', 0);
-
-    const [tables] = await conn.query('SHOW TABLES');
-
-    let dump = '-- Kvant seed dump\n\n';
-    const total = tables.length;
-    let processed = 0;
-
-    for (const table of tables) {
-      const tableName = Object.values(table)[0];
-      const [rows] = await conn.query(`SELECT * FROM \`${tableName}\``);
-
-      if (rows.length > 0) {
-        const columns = Object.keys(rows[0]); 
-        for (const row of rows) {
-          const values = columns.map(col => conn.escape(row[col])).join(', ');
-          dump += `INSERT INTO \`${tableName}\` (\`${columns.join('`, `')}\`) VALUES (${values});\n`;
-        }
-        dump += '\n';
-      }
-
-      processed++;
-      const progress = Math.round((processed / total) * 100);
-      event.sender.send('export-progress', progress);
-    }
-
-    await fs.promises.writeFile(filePath, dump);
-    event.sender.send('export-progress', 100);
-
-    return { success: true, filePath };
-  } catch (err) {
-    return { success: false, message: err.message };
-  } finally {
-    if (conn) conn.release();
-  }
-});
-ipcMain.handle('import-seed', async (event) => {
-  const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
-    filters: [{ name: 'SQL Files', extensions: ['sql'] }]
+  ipcMain.handle('import-seed', async (event) => {
+    const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
+      filters: [{ name: 'SQL Files', extensions: ['sql'] }]
+    });
+    if (canceled || !filePaths?.[0]) return { success: false, message: 'discard' };
+    const onProgress = (p) => event.sender.send('import-progress', p);
+    return importSeed(filePaths[0], onProgress);
   });
-
-  if (canceled || !filePaths?.[0]) {
-    return { success: false, message: 'discard' };
-  }
-
-  let conn = null;
-  try {
-    const sql = await fs.promises.readFile(filePaths[0], 'utf8');
-
-    console.log('started seed import, file size:', sql.length, 'byte');
-    const lines = sql.split('\n');
-
-    // оставляем только строки, которые начинаются с INSERT
-    const insertLines = lines
-      .map(line => line.trim())
-      .filter(line => line.toUpperCase().startsWith('INSERT INTO'))
-      .filter(line => line.endsWith(';')); // только завершённые запросы
-
-    console.log(`Найдено INSERT-запросов: ${insertLines.length}`);
-
-    if (insertLines.length === 0) {
-      return { success: false, message: 'В файле не найдено ни одного INSERT-запроса' };
-    }
-
-    event.sender.send('import-progress', 0);
-
-    const pool = await getPool();
-    conn = await pool.getConnection();
-
-    await conn.query('SET FOREIGN_KEY_CHECKS = 0;');
-
-    let processed = 0;
-    const total = insertLines.length;
-
-    for (const query of insertLines) {
-      try {
-        await conn.query(query);
-        processed++;
-        const progress = Math.round((processed / total) * 100);
-        event.sender.send('import-progress', progress); 
-
-        await new Promise(resolve => setImmediate(resolve));
-      } catch (queryErr) {
-        console.error(`Ошибка в запросе: ${query.substring(0, 100)}...`, queryErr.message);
-      }
-    }
-
-    await conn.query('SET FOREIGN_KEY_CHECKS = 1;');
-
-    event.sender.send('import-progress', 100);
-
-    console.log('Импорт seed завершён. Обработано INSERT:', processed);
-
-    return { success: true, processedInserts: processed };
-  } catch (err) {
-    console.error('Критическая ошибка импорта seed:', err.message, err.stack);
-    return { success: false, message: err.message || 'Неизвестная ошибка при импорте' };
-  } finally {
-    if (conn) {
-      conn.release();
-      console.log('Соединение освобождено');
-    }
-  }
-});
   ipcMain.on('restart-app', () => {
     require('electron').app.relaunch();
     require('electron').app.quit();
@@ -206,4 +179,4 @@ ipcMain.handle('import-seed', async (event) => {
   });
 }
 
-module.exports = { registerHandlers };
+module.exports = { registerHandlers, exportSeed, importSeed };

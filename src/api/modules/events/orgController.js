@@ -52,7 +52,6 @@ function sendError(res, status, error) {
   res.status(status).json({ success: false, error });
 }
 
-/** POST /list — фильтры, сортировка, пагинация (без total) */
 exports.list = async (req, res) => {
   const { filters, sort, page, limit, offset } = parseListBody(req.body);
   const { where, params } = buildWhere(filters);
@@ -83,6 +82,17 @@ exports.count = async (req, res) => {
   }
 };
 
+/** GET /resp-table — таблица ответственных за мероприятия организации */
+exports.respTable = async (req, res) => {
+  try {
+    const [rows] = await withConnection((conn) => conn.query('SELECT * FROM responsible_for_org_events'));
+    sendSuccess(res, { data: rows });
+  } catch (err) {
+    console.error('org respTable:', err);
+    sendError(res, 500, 'Не удалось получить таблицу.');
+  }
+};
+
 /** GET /full-inf/:id */
 exports.fullInf = async (req, res) => {
   const id = parsePositiveId(req.params.id);
@@ -109,17 +119,6 @@ exports.responsible = async (req, res) => {
   } catch (err) {
     console.error('org responsible:', err);
     sendError(res, 500, 'Не удалось получить ответственных.');
-  }
-};
-
-/** GET /resp-table */
-exports.respTable = async (req, res) => {
-  try {
-    const [rows] = await withConnection((conn) => conn.query('SELECT * FROM responsible_for_org_events'));
-    sendSuccess(res, { data: rows });
-  } catch (err) {
-    console.error('org respTable:', err);
-    sendError(res, 500, 'Не удалось получить таблицу.');
   }
 };
 

@@ -290,38 +290,41 @@ describe('ipcHandlers', () => {
       expect(getPool).not.toHaveBeenCalled();
     });
 it('успешный экспорт с данными', async () => {
+  const mockEvent = { sender: { send: jest.fn() } };
   dialog.showSaveDialog.mockResolvedValue({ filePath: '/tmp/dump.sql', canceled: false });
 
   const mockConn = {
     query: jest.fn(),
     release: jest.fn(),
-    escape: mysqlReal.escape,  // ← Реальная функция escape
+    escape: mysqlReal.escape,
   };
 
   mockConn.query
-    .mockResolvedValueOnce([[{ Tables_in_kvant: 'users' }, { Tables_in_kvant: 'orders' }]]) // SHOW TABLES
-    .mockResolvedValueOnce([[{ id: 1, name: 'Alice' }]]) // users
-    .mockResolvedValueOnce([[{ id: 101, amount: 500 }]]); // orders
+    .mockResolvedValueOnce([[{ Tables_in_kvant: 'users' }, { Tables_in_kvant: 'orders' }]])
+    .mockResolvedValueOnce([[{ id: 1, name: 'Alice' }]])
+    .mockResolvedValueOnce([[{ id: 101, amount: 500 }]]);
 
   const mockPoolForExport = { getConnection: jest.fn().mockResolvedValue(mockConn) };
   getPool.mockResolvedValue(mockPoolForExport);
 
-  jest.spyOn(fs, 'writeFile').mockResolvedValue(undefined);
+  jest.spyOn(require('fs').promises, 'writeFile').mockResolvedValue(undefined);
 
-  const result = await handlersMap['export-seed']();
+  const result = await handlersMap['export-seed'](mockEvent);
 
   expect(result.success).toBe(true);
   expect(result.filePath).toBe('/tmp/dump.sql');
-  expect(fs.writeFile).toHaveBeenCalledTimes(1);
+  expect(require('fs').promises.writeFile).toHaveBeenCalledTimes(1);
 
-  const writtenContent = fs.writeFile.mock.calls[0][1];
+  const writtenContent = require('fs').promises.writeFile.mock.calls[0][1];
   expect(writtenContent).toContain('-- Kvant seed dump');
-  expect(writtenContent).toContain('INSERT INTO `users` VALUES\n(1,\'Alice\')');
-  expect(writtenContent).toContain('INSERT INTO `orders` VALUES\n(101,500)');
-  expect(writtenContent).toContain(';\n\n');
+  expect(writtenContent).toContain('INSERT INTO `users`');
+  expect(writtenContent).toContain('Alice');
+  expect(writtenContent).toContain('INSERT INTO `orders`');
+  expect(writtenContent).toContain('500');
 });
 
     it('таблицы без строк — не пишет INSERT', async () => {
+      const mockEvent = { sender: { send: jest.fn() } };
       dialog.showSaveDialog.mockResolvedValue({ filePath: '/tmp/empty.sql', canceled: false });
 
       const mockConn = {
@@ -330,15 +333,15 @@ it('успешный экспорт с данными', async () => {
       };
       mockConn.query
         .mockResolvedValueOnce([[{ Tables_in_db: 'empty_table' }]])
-        .mockResolvedValueOnce([[]]); // нет строк
+        .mockResolvedValueOnce([[]]);
 
       getPool.mockResolvedValue({ getConnection: jest.fn().mockResolvedValue(mockConn) });
 
-      jest.spyOn(fs, 'writeFile').mockResolvedValue(undefined);
+      jest.spyOn(require('fs').promises, 'writeFile').mockResolvedValue(undefined);
 
-      await handlersMap['export-seed']();
+      await handlersMap['export-seed'](mockEvent);
 
-      const content = fs.writeFile.mock.calls[0][1];
+      const content = require('fs').promises.writeFile.mock.calls[0][1];
       expect(content).not.toContain('INSERT INTO');
       expect(content).toContain('-- Kvant seed dump');
     });
@@ -357,13 +360,14 @@ it('успешный экспорт с данными', async () => {
     it('отмена диалога → success: false', async () => {
       dialog.showOpenDialog.mockResolvedValue({ canceled: true });
       const result = await handlersMap['import-seed']();
-      expect(result).toEqual({ success: false, message: 'Отменено' });
+      expect(result).toEqual({ success: false, message: 'discard' });
     });
 
     it('успешный импорт', async () => {
+      const mockEvent = { sender: { send: jest.fn() } };
       dialog.showOpenDialog.mockResolvedValue({ filePaths: ['/tmp/seed.sql'], canceled: false });
 
-      jest.spyOn(fs, 'readFile').mockResolvedValue('INSERT INTO users VALUES (1,"test");');
+      jest.spyOn(require('fs').promises, 'readFile').mockResolvedValue('INSERT INTO users VALUES (1,"test");');
 
       const mockConn = {
         query: jest.fn().mockResolvedValue(undefined),
@@ -371,10 +375,11 @@ it('успешный экспорт с данными', async () => {
       };
       getPool.mockResolvedValue({ getConnection: jest.fn().mockResolvedValue(mockConn) });
 
-      const result = await handlersMap['import-seed']();
+      const result = await handlersMap['import-seed'](mockEvent);
 
       expect(result.success).toBe(true);
-      expect(fs.readFile).toHaveBeenCalledWith('/tmp/seed.sql', 'utf8');
+      expect(result.processedInserts).toBe(1);
+      expect(require('fs').promises.readFile).toHaveBeenCalledWith('/tmp/seed.sql', 'utf8');
       expect(mockConn.query).toHaveBeenCalledWith('INSERT INTO users VALUES (1,"test");');
     });
 
@@ -387,19 +392,23 @@ it('успешный экспорт с данными', async () => {
       expect(result.message).toContain('ENOENT');
     });
 
-    it('ошибка выполнения SQL', async () => {
+    it('ошибка выполнения SQL — ошибки в запросах не прерывают импорт, processedInserts без учёта упавших', async () => {
+      const mockEvent = { sender: { send: jest.fn() } };
       dialog.showOpenDialog.mockResolvedValue({ filePaths: ['/bad.sql'], canceled: false });
-      jest.spyOn(fs, 'readFile').mockResolvedValue('INSERT INTO nonexistent ...');
+      jest.spyOn(require('fs').promises, 'readFile').mockResolvedValue('INSERT INTO nonexistent VALUES (1);');
 
       const mockConn = {
-        query: jest.fn().mockRejectedValue(new Error('Table doesn\'t exist')),
+        query: jest.fn()
+          .mockResolvedValueOnce(undefined)
+          .mockRejectedValueOnce(new Error('Table doesn\'t exist'))
+          .mockResolvedValueOnce(undefined),
         release: jest.fn(),
       };
       getPool.mockResolvedValue({ getConnection: jest.fn().mockResolvedValue(mockConn) });
 
-      const result = await handlersMap['import-seed']();
-      expect(result.success).toBe(false);
-      expect(result.message).toContain('Table doesn\'t exist');
+      const result = await handlersMap['import-seed'](mockEvent);
+      expect(result.success).toBe(true);
+      expect(result.processedInserts).toBe(0);
     });
   });
 

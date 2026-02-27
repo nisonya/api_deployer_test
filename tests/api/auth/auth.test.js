@@ -2,7 +2,7 @@ const request = require('supertest');
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const authRouter = require('../../src/api/modules/auth/routes'); 
+const authRouter = require('../../../src/api/modules/auth/routes'); 
 
 jest.mock('jsonwebtoken', () => ({
   sign: jest.fn((payload) => `fake-token-${payload.userId}`),
@@ -13,7 +13,7 @@ jest.mock('bcryptjs', () => ({
   compare: jest.fn().mockResolvedValue(true),
 }));
 
-jest.mock('../../src/db/connection', () => ({
+jest.mock('../../../src/db/connection', () => ({
   getPool: jest.fn().mockResolvedValue({
     query: jest.fn(),
   }),
@@ -28,7 +28,7 @@ describe('Auth Router', () => {
     app = express();
     app.use(express.json());
     app.use('/api/auth', authRouter);
-    const mockPool = await require('../../src/db/connection').getPool();
+    const mockPool = await require('../../../src/db/connection').getPool();
     mockQuery = mockPool.query;
     jwt.sign.mockImplementation((payload) => `fake-token-${payload.userId}`);
     jwt.verify.mockImplementation((token) => {

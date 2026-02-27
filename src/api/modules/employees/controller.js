@@ -15,7 +15,7 @@ async function fetchAllEmployees(conn) {
   return rows;
 }
 
-/** get_all_employees: position != 10 (legacy) */
+/** get_all_employees */
 async function fetchAllEmployeesLegacy(conn) {
   const [rows] = await conn.query(
     `SELECT e.id_employees, e.first_name, e.second_name, e.patronymic,
@@ -23,7 +23,7 @@ async function fetchAllEmployeesLegacy(conn) {
       e.contact, e.size, e.education, e.schedule, e.gender
      FROM employees e
      INNER JOIN position p ON e.position = p.id
-     WHERE e.position != 10`
+     WHERE e.is_active = 1`
   );
   return rows;
 }
@@ -38,7 +38,7 @@ async function fetchEmployeesByLetter(conn, letter) {
   if (!letter || !String(letter).trim()) {
     const [rows] = await conn.query(
       `SELECT id_employees, CONCAT(first_name, ' ', second_name) AS name
-       FROM employees WHERE position != 10`
+       FROM employees WHERE is_active = 1`
     );
     return rows;
   }
@@ -51,11 +51,11 @@ async function fetchEmployeesByLetter(conn, letter) {
   return rows;
 }
 
-/** get_employee: short list id, name (position != 10) */
+/** get_employee: short list id, name  */
 async function fetchEmployeeShortList(conn) {
   const [rows] = await conn.query(
     `SELECT id_employees AS id, CONCAT(first_name, ' ', second_name) AS name
-     FROM employees WHERE position != 10`
+     FROM employees WHERE is_active = 1`
   );
   return rows;
 }
@@ -154,7 +154,7 @@ exports.getAllEmployees = async (req, res) => {
   }
 };
 
-/** GET /api/employees/all — список как get_all_employees (position != 10) */
+/** GET /api/employees/all — список как get_all_employees */
 exports.getAllEmployeesLegacy = async (req, res) => {
   try {
     const rows = await withConnection(fetchAllEmployeesLegacy);
@@ -190,7 +190,7 @@ exports.searchByLetter = async (req, res) => {
   }
 };
 
-/** GET /api/employees/short-list — id, name (position != 10) */
+/** GET /api/employees/short-list — id, name  */
 exports.getShortList = async (req, res) => {
   try {
     const rows = await withConnection(fetchEmployeeShortList);

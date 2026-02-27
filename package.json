@@ -5,8 +5,13 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "start:headless": "node server.js",
+    "setup:headless": "node scripts/setup-cli.js",
+    "export-db": "node scripts/export-db.js",
+    "import-db": "node scripts/import-db.js",
     "build:win": "electron-builder --win",
     "build:linux": "electron-builder --linux",
+    "build:linux-headless": "node scripts/build-headless.js",
     "build:all": "electron-builder --win --linux",
     "build": "electron-builder",
     "test": "jest",
@@ -16,7 +21,8 @@
     "test:coverage": "vitest run --coverage",
     "test:all": "npm run test:sync && npm run test:async",
     "test:auth": "jest tests/api/auth.test.js",
-    "test:preload": "jest tests/preload.test.js"
+    "test:preload": "jest tests/preload.test.js",
+    "doc:word": "node scripts/md-to-docx.js"
   },
   "build": {
     "appId": "com.yourcompany.yourapp",
@@ -24,6 +30,10 @@
     "directories": {
       "output": "dist"
     },
+    "files": [
+      "**/*",
+      "!*.pem"
+    ],
     "win": {
       "target": [
         {
@@ -60,6 +70,7 @@
     "@types/supertest": "^6.0.3",
     "@vitest/coverage-v8": "^4.0.18",
     "cookie-parser": "^1.4.7",
+    "docx": "^9.6.0",
     "electron": "^28.0.0",
     "electron-builder": "^26.0.12",
     "express": "^5.2.1",
@@ -77,6 +88,7 @@
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
     "electron-store": "^11.0.2",
-    "request": "^2.88.2"
+    "request": "^2.88.2",
+    "selfsigned": "^2.4.1"
   }
 }
