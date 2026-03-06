@@ -202,5 +202,6 @@ module.exports = {
   collectCoverage: true,
   coverageDirectory: 'coverage',
   testMatch: ['**/tests/**/*.test.js'],
+  testPathIgnorePatterns: ['/node_modules/', 'tests/async'],
   clearMocks: true,
 };

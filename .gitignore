@@ -2,6 +2,7 @@ node_modules/
 *.env
 *.pem
 dist/
+dist-headless/
 coverage/
 dumps/
 *.log

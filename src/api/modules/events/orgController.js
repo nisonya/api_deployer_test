@@ -97,7 +97,7 @@ exports.respTable = async (req, res) => {
 exports.fullInf = async (req, res) => {
   const id = parsePositiveId(req.params.id);
   if (id == null) return sendError(res, 400, 'Некорректный id.');
-  const sql = `SELECT eo.id, eo.name, eo.form_of_holding, DATE_FORMAT(eo.dates_of_event, '%Y-%m-%d') AS dates_of_event, eo.day_of_the_week, eo.amount_of_applications, eo.amount_of_planning_application, eo.annotation, eo.result FROM event_plan_organization eo WHERE eo.id = ?`;
+  const sql = `SELECT eo.id, eo.name, eo.form_of_holding, DATE_FORMAT(eo.dates_of_event, '%Y-%m-%d') AS dates_of_event, eo.day_of_the_week, eo.amount_of_applications, eo.amount_of_planning_application, eo.annotation, eo.result, eo.type, eo.link FROM event_plan_organization eo WHERE eo.id = ?`;
   try {
     const [rows] = await withConnection((conn) => conn.query(sql, [id]));
     if (rows.length === 0) return sendError(res, 404, 'Мероприятие не найдено.');
@@ -171,9 +171,9 @@ exports.add = async (req, res) => {
   const check = requireBodyKeys(req.body, keys);
   if (!check.valid) return sendError(res, 400, check.message);
   const b = req.body;
-  const sql = `INSERT INTO event_plan_organization (name, form_of_holding, dates_of_event, day_of_the_week, amount_of_applications, amount_of_planning_application, annotation, result) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+  const sql = `INSERT INTO event_plan_organization (name, form_of_holding, dates_of_event, day_of_the_week, amount_of_applications, amount_of_planning_application, annotation, result, type, link) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
   try {
-    const [r] = await withConnection((conn) => conn.query(sql, [b.name, b.form_of_holding || null, b.dates_of_event || null, b.day_of_the_week || null, b.amount_of_applications ?? null, b.amount_of_planning_application ?? null, b.annotation || null, b.result || null]));
+    const [r] = await withConnection((conn) => conn.query(sql, [b.name, b.form_of_holding || null, b.dates_of_event || null, b.day_of_the_week || null, b.amount_of_applications ?? null, b.amount_of_planning_application ?? null, b.annotation || null, b.result || null, b.type ?? null, b.link || null]));
     sendSuccess(res, { id: r.insertId }, 201);
   } catch (err) {
     console.error('org add:', err);
@@ -189,9 +189,9 @@ exports.update = async (req, res) => {
   const id = parsePositiveId(req.body.id);
   if (id == null) return sendError(res, 400, 'Некорректный id.');
   const b = req.body;
-  const sql = `UPDATE event_plan_organization SET name = ?, form_of_holding = ?, dates_of_event = ?, day_of_the_week = ?, amount_of_applications = ?, amount_of_planning_application = ?, annotation = ?, result = ? WHERE id = ?`;
+  const sql = `UPDATE event_plan_organization SET name = ?, form_of_holding = ?, dates_of_event = ?, day_of_the_week = ?, amount_of_applications = ?, amount_of_planning_application = ?, annotation = ?, result = ?, type = ?, link = ? WHERE id = ?`;
   try {
-    const [r] = await withConnection((conn) => conn.query(sql, [b.name, b.form_of_holding || null, b.dates_of_event || null, b.day_of_the_week || null, b.amount_of_applications ?? null, b.amount_of_planning_application ?? null, b.annotation || null, b.result || null, id]));
+    const [r] = await withConnection((conn) => conn.query(sql, [b.name, b.form_of_holding || null, b.dates_of_event || null, b.day_of_the_week || null, b.amount_of_applications ?? null, b.amount_of_planning_application ?? null, b.annotation || null, b.result || null, b.type ?? null, b.link || null, id]));
     if (r.affectedRows === 0) return sendError(res, 404, 'Мероприятие не найдено.');
     sendSuccess(res, { ok: true });
   } catch (err) {

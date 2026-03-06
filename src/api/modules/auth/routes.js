@@ -3,12 +3,23 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { getPool } = require('../../../db/connection');
+const { getAccessSecret, getRefreshSecret } = require('../../jwtSecrets');
 
 router.post('/login', async (req, res) => {
   const { login, password } = req.body;
 
   if (!login || !password) {
     return res.status(400).json({ error: 'Введите логин и пароль' });
+  }
+
+  const accessSecret = getAccessSecret();
+  const refreshSecret = getRefreshSecret();
+  if (!accessSecret || !refreshSecret) {
+    console.error('Ошибка логина: JWT-секреты не заданы (задайте JWT_ACCESS_SECRET и JWT_REFRESH_SECRET в env или они сгенерируются при старте API)');
+    return res.status(500).json({
+      error: 'Ошибка сервера',
+      details: 'Не настроены секреты JWT. Задайте в переменных окружения JWT_ACCESS_SECRET и JWT_REFRESH_SECRET (или JWT_SECRET) — либо перезапустите API, чтобы они сгенерировались.'
+    });
   }
 
   try {
@@ -35,13 +46,13 @@ router.post('/login', async (req, res) => {
         userId: user.id, 
         accessLevel: user.access_level_id 
       },
-      process.env.JWT_ACCESS_SECRET,
+      accessSecret,
       { expiresIn: '1h' }
     );
 
     const refreshToken = jwt.sign(
       { userId: user.id },
-      process.env.JWT_REFRESH_SECRET,
+      refreshSecret,
       { expiresIn: '7d' }
     );
 
@@ -67,8 +78,10 @@ await pool.query(
       }
     });
   } catch (err) {
-    console.error('Ошибка логина:', err);
-    res.status(500).json({ error: 'Ошибка сервера' });
+    console.error('Ошибка логина:', err.message, err.stack);
+    const payload = { error: 'Ошибка сервера' };
+    if (process.env.NODE_ENV !== 'production') payload.details = err.message;
+    res.status(500).json(payload);
   }
 });
 
@@ -80,7 +93,7 @@ router.post('/refresh', async (req, res) => {
   }
 
   try {
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    const decoded = jwt.verify(refreshToken, getRefreshSecret());
 
     const pool = await getPool();
     const [rows] = await pool.query(
@@ -110,7 +123,7 @@ router.post('/refresh', async (req, res) => {
         userId: user.id, 
         accessLevel: user.access_level_id 
       },
-      process.env.JWT_ACCESS_SECRET,
+      getAccessSecret(),
       { expiresIn: '1h' }
     );
 

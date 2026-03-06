@@ -1,13 +1,14 @@
 /**
- * Пути к TLS-сертификатам для HTTPS.
- * Ключи не попадают в установщик: при первом запуске генерируется уникальный самоподписанный сертификат для каждой установки.
- * Для разработки можно положить key.pem и cert.pem в корень проекта — они будут использованы в первую очередь.
+ * TLS только из env или генерация при старте с сохранением в .env.
+ * Приоритет: 1) env SSL_KEY/SSL_CERT, 2) файлы key.pem/cert.pem, 3) сгенерировать и записать в .env.
  */
 const fs = require('fs');
 const path = require('path');
 const selfsigned = require('selfsigned');
 
 const projectRoot = path.resolve(__dirname, '../..');
+
+let cachedHttpsOptions = null;
 
 function getCertsDir() {
   if (typeof process !== 'undefined' && process.versions && process.versions.electron) {
@@ -17,8 +18,8 @@ function getCertsDir() {
       // fallback
     }
   }
-  const { getConfigFilePath } = require('../common/config');
-  return path.join(path.dirname(getConfigFilePath()), 'certs');
+  const { getConfigDir } = require('../common/envLoader');
+  return path.join(getConfigDir(), 'certs');
 }
 
 function getKeyCertPaths() {
@@ -36,27 +37,44 @@ function getKeyCertPaths() {
   return null;
 }
 
-function generateSelfSigned(certsDir) {
-  if (!fs.existsSync(certsDir)) {
-    fs.mkdirSync(certsDir, { recursive: true });
-  }
-  const attrs = [{ name: 'commonName', value: 'KVANT API (local)' }];
-  const opts = { keySize: 2048, days: 3650 };
-  const pems = selfsigned.generate(attrs, opts);
-  const keyPath = path.join(certsDir, 'key.pem');
-  const certPath = path.join(certsDir, 'cert.pem');
-  fs.writeFileSync(keyPath, pems.private, 'utf8');
-  fs.writeFileSync(certPath, pems.cert, 'utf8');
-  return { key: keyPath, cert: certPath };
-}
-
 function getHttpsOptions() {
-  const paths = getKeyCertPaths();
-  const keyCertPaths = paths || generateSelfSigned(getCertsDir());
-  return {
-    key: fs.readFileSync(keyCertPaths.key),
-    cert: fs.readFileSync(keyCertPaths.cert)
+  if (cachedHttpsOptions) return cachedHttpsOptions;
+
+  const envKey = process.env.SSL_KEY;
+  const envCert = process.env.SSL_CERT;
+  if (envKey && envCert) {
+    cachedHttpsOptions = {
+      key: Buffer.from(envKey, 'utf8'),
+      cert: Buffer.from(envCert, 'utf8')
+    };
+    return cachedHttpsOptions;
+  }
+
+  const keyCertPaths = getKeyCertPaths();
+  if (keyCertPaths) {
+    cachedHttpsOptions = {
+      key: fs.readFileSync(keyCertPaths.key),
+      cert: fs.readFileSync(keyCertPaths.cert)
+    };
+    return cachedHttpsOptions;
+  }
+
+  const pems = selfsigned.generate(
+    [{ name: 'commonName', value: 'KVANT API (local)' }],
+    { keySize: 2048, days: 3650 }
+  );
+  cachedHttpsOptions = {
+    key: Buffer.from(pems.private, 'utf8'),
+    cert: Buffer.from(pems.cert, 'utf8')
   };
+  process.env.SSL_KEY = pems.private;
+  process.env.SSL_CERT = pems.cert;
+  try {
+    require('../common/envLoader').writeEnvVars({ SSL_KEY: pems.private, SSL_CERT: pems.cert });
+  } catch (e) {
+    // .env может быть недоступен при тестах
+  }
+  return cachedHttpsOptions;
 }
 
 module.exports = { getHttpsOptions, getCertsDir, getKeyCertPaths };

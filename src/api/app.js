@@ -1,53 +1,73 @@
-require('dotenv').config();
+// Только HTTPS; все настройки из env (.env загружается в main/server до сюда)
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const https = require('https');
+const crypto = require('crypto');
 const { deploy } = require('../db/deploy');
-const { getDbConfig } = require('../common/config');
+const { getDbConfig, writeEnvVars } = require('../common/envLoader');
 const { getHttpsOptions } = require('./certs');
+const { setSecrets } = require('./jwtSecrets');
+
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
+
 const authMiddleware = require('./middleware/auth');
-const authRoutes = require('./modules/auth/routes');
-app.use('/api/auth', authRoutes);
-app.use('/api/employees', authMiddleware, require('./modules/employees/routes'));
-app.use('/api/events/org', authMiddleware, require('./modules/events/orgRoutes'));
-app.use('/api/events/part', authMiddleware, require('./modules/events/partRoutes'));
-app.use('/api/schedule', authMiddleware, require('./modules/schedule/routes'));
-app.use('/api/reference', authMiddleware, require('./modules/reference/routes'));
-app.use('/api/rent', authMiddleware, require('./modules/rent/routes'));
-app.use('/api/students', authMiddleware, require('./modules/students/routes'));
-app.use('/api/attendance', authMiddleware, require('./modules/attendance/routes'));
-app.use('/api/groups', authMiddleware, require('./modules/groups/routes'));
+app.use('/api/auth', require('./modules/auth/routes'));
 
-// Корневой эндпоинт для проверки
+const protectedRoutes = [
+  ['/api/employees', 'modules/employees/routes'],
+  ['/api/events/org', 'modules/events/orgRoutes'],
+  ['/api/events/part', 'modules/events/partRoutes'],
+  ['/api/schedule', 'modules/schedule/routes'],
+  ['/api/reference', 'modules/reference/routes'],
+  ['/api/rent', 'modules/rent/routes'],
+  ['/api/students', 'modules/students/routes'],
+  ['/api/attendance', 'modules/attendance/routes'],
+  ['/api/groups', 'modules/groups/routes'],
+];
+protectedRoutes.forEach(([mountPath, routePath]) => {
+  app.use(mountPath, authMiddleware, require(`./${routePath}`));
+});
+
 app.get('/', (req, res) => res.send('API work'));
-
-// Обработчик ошибок — последний в цепочке (вызывается при next(err))
 app.use(require('./middleware/errorHandler'));
 
 const DEFAULT_API_PORT = 3000;
-
 let server = null;
+
+function ensureJwtSecrets() {
+  let access = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
+  let refresh = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
+  if (access && refresh) {
+    setSecrets(access, refresh);
+    return;
+  }
+  access = access || crypto.randomBytes(32).toString('hex');
+  refresh = refresh || crypto.randomBytes(32).toString('hex');
+  process.env.JWT_ACCESS_SECRET = access;
+  process.env.JWT_REFRESH_SECRET = refresh;
+  writeEnvVars({ JWT_ACCESS_SECRET: access, JWT_REFRESH_SECRET: refresh });
+  setSecrets(access, refresh);
+}
+
 async function startApi(port = DEFAULT_API_PORT) {
   await deploy();
 
-  const config = await getDbConfig();
-  const httpsOptions = getHttpsOptions();
+  const config = getDbConfig();
+  const apiPort = port ?? config.apiPort ?? DEFAULT_API_PORT;
 
-  server = https.createServer(httpsOptions, app);
+  ensureJwtSecrets();
 
-  const host = config.apiHost ?? '0.0.0.0';
+  server = https.createServer(getHttpsOptions(), app);
+  const host = '0.0.0.0';
+
   return new Promise((resolve, reject) => {
-    server.listen(port, host, () => {
-      console.log(`API is running on https://${host}:${port}`);
+    server.listen(apiPort, host, () => {
+      console.log(`API is running on https://${host}:${apiPort}`);
       resolve(server);
     });
-
-    server.on('error', (err) => {
-      reject(err);
-    });
+    server.on('error', reject);
   });
 }
 
@@ -66,4 +86,10 @@ function getStatus() {
   return { running: !!server };
 }
 
-module.exports = { startApi, stopApi, getStatus, app };
+/** Когда API запущен: { port, protocol }. Иначе null. */
+function getAddresses() {
+  const a = server?.address();
+  return a ? { port: a.port, protocol: 'https' } : null;
+}
+
+module.exports = { startApi, stopApi, getStatus, getAddresses, app };

@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startApi: () => ipcRenderer.invoke('start-api'),
   stopApi: () => ipcRenderer.invoke('stop-api'),
   getApiStatus: () => ipcRenderer.invoke('get-api-status'),
+  getApiAddresses: () => ipcRenderer.invoke('get-api-addresses'),
   testDBConnection: (config) => ipcRenderer.invoke('test-db-connection', config),
   saveDBConfig: (config) => ipcRenderer.invoke('save-db-config', config),
   openDbSetup: () => ipcRenderer.send('open-db-setup'),

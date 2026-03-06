@@ -8,6 +8,8 @@
  * который проверяет пользователя). В тестах мы подменяем query так, чтобы первый вызов
  * (проверка токена) возвращал валидного пользователя, а остальные — данные для контроллера.
  */
+require('../src/api/jwtSecrets').setSecrets('test-access-secret', 'test-refresh-secret');
+
 const express = require('express');
 const app = express();
 

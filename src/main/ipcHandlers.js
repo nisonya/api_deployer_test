@@ -1,5 +1,5 @@
-const { startApi, stopApi } = require('../api/app');
-const { getDbConfig, setDbConfig, updateApiPort } = require('../common/config');
+const { startApi, stopApi, getAddresses } = require('../api/app');
+const { getDbConfig, setDbConfig, updateApiPort } = require('../common/envLoader');
 const { getPool } = require('../db/connection');
 const fs = require('fs').promises;
 const path = require('path');
@@ -90,12 +90,13 @@ function registerHandlers(mainWindow) {
   }
 
   ipcMain.handle('get-api-status', () => ({ running: !!getApiServer() }));
+  ipcMain.handle('get-api-addresses', () => getAddresses());
 
-  ipcMain.handle('get-db-config', async () => safeDbConfig(await getDbConfig()));
+  ipcMain.handle('get-db-config', async () => safeDbConfig(await Promise.resolve(getDbConfig())));
   ipcMain.handle('start-api', async () => {
     if (getApiServer()) return { success: false, message: 'API is running' };
     try {
-      const config = await getDbConfig();
+      const config = await Promise.resolve(getDbConfig());
       const apiPort = config?.apiPort ?? 3000;
       const server = await startApi(apiPort);
       setApiServer(server);

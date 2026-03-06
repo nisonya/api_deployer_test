@@ -2,6 +2,7 @@ const request = require('supertest');
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+require('../../../src/api/jwtSecrets').setSecrets('test-access-secret', 'test-refresh-secret');
 const authRouter = require('../../../src/api/modules/auth/routes'); 
 
 jest.mock('jsonwebtoken', () => ({

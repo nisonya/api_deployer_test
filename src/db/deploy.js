@@ -1,7 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const { getAdminPool, getPool } = require('./connection');
-const { getDbConfig } = require('../common/config');
+const { getDbConfig } = require('../common/envLoader');
 const bcrypt = require('bcryptjs');
 
 async function deploy() {
@@ -19,6 +19,7 @@ async function deploy() {
 
     if (rows.length > 0) {
       console.log('DB is alredy deployed');
+      await initRootUser();
       return;
     }
 
@@ -54,7 +55,7 @@ await conn.query('SET FOREIGN_KEY_CHECKS=0;');
     }
 
     await conn.query('SET FOREIGN_KEY_CHECKS=1;');
-    initRootUser();
+    await initRootUser();
     console.log('schema deployed sucssesfully');
   } catch (err) {
     console.error('Deploy error:', err);
@@ -68,17 +69,24 @@ async function initRootUser() {
   const [rows] = await pool.query('SELECT COUNT(*) as count FROM profile');
 
   if (rows[0].count === 0) {
-    const defaultLogin = 'root';
+    const defaultLogin = 'rootroot'; // не менее 6 символов (триггер в БД)
     const defaultPassword = 'initial123'; // Изменить после первого логина!
     const hash = await bcrypt.hash(defaultPassword, 12);
     const defaultAccessLevel = 1; // Админ-уровень
 
+    // profile привязан к employees; создаём системного сотрудника для root
+    const [empResult] = await pool.query(
+      `INSERT INTO employees (first_name, second_name, date_of_birth, position) VALUES (?, ?, ?, NULL)`,
+      ['System', 'Admin', '2000-01-01']
+    );
+    const employeeId = empResult.insertId;
+
     await pool.query(
-      'INSERT INTO profile (login, password_hash, access_level_id) VALUES (?, ?, ?)',
-      [defaultLogin, hash, defaultAccessLevel]
+      'INSERT INTO profile (employee_id, login, password_hash, access_level_id) VALUES (?, ?, ?, ?)',
+      [employeeId, defaultLogin, hash, defaultAccessLevel]
     );
 
-    console.log('Создан root-аккаунт: login: root, password: initial123. Смените пароль!');
+    console.log('Создан root-аккаунт: login: rootroot, password: initial123. Смените пароль!');
   }
 }  
 

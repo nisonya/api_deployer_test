@@ -30,6 +30,7 @@ describe('preload.js', () => {
       'startApi',
       'stopApi',
       'getApiStatus',
+      'getApiAddresses',
       'testDBConnection',
       'saveDBConfig',
       'openDbSetup',

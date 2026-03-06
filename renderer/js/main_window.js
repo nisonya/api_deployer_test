@@ -5,14 +5,16 @@ const settingsBtn = document.getElementById('settingsBtn');
 const backUpBtn = document.getElementById('backupHeader');
 async function updateStatus() {
   const res = await window.electronAPI.getApiStatus();
-  const config = await window.electronAPI.getDbConfig();
-  if (res.running) {
+  const addrs = await window.electronAPI.getApiAddresses();
+  if (res.running && addrs) {
     statusEl.textContent = 'Сервер запущен';
-    addressEl.textContent = `https://localhost:${config?.apiPort || 3000}`;
+    addressEl.textContent = `${addrs.protocol}://0.0.0.0:${addrs.port}`;
+    addressEl.title = `Обращайтесь по адресу вашего сервера и порту ${addrs.port}`;
     switchEl.checked = true;
   } else {
     statusEl.textContent = 'Сервер остановлен';
     addressEl.textContent = '';
+    addressEl.title = '';
     switchEl.checked = false;
   }
 }

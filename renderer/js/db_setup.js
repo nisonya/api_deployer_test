@@ -41,12 +41,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function getDbFormData() {
+  const apiPortNum = parseInt(document.getElementById('apiPort').value, 10);
   return {
     host: document.getElementById('host').value.trim(),
     port: parseInt(document.getElementById('port').value),
     user: document.getElementById('user').value.trim(),
     password: document.getElementById('password').value,
-    database: document.getElementById('database').value.trim()
+    database: document.getElementById('database').value.trim(),
+    apiPort: (Number.isInteger(apiPortNum) && apiPortNum >= 0 && apiPortNum <= 65535) ? apiPortNum : 3000
   };
 }
 
@@ -103,8 +105,8 @@ apiForm.addEventListener('submit', async (e) => {
   const apiPortInput = document.getElementById('apiPort');
   const apiPort = parseInt(apiPortInput.value);
 
-  if (isNaN(apiPort) || apiPort < 1024 || apiPort > 65535) {
-    message.textContent = 'Порт API должен быть от 1024 до 65535';
+  if (isNaN(apiPort) || apiPort < 0 || apiPort > 65535) {
+    message.textContent = 'Порт API должен быть от 0 до 65535';
     message.style.color = 'red';
     return;
   }

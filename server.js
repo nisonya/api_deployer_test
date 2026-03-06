@@ -2,24 +2,17 @@
 /**
  * Точка входа для запуска API без GUI (headless).
  * Запуск: node server.js  или  npm run start:headless
+ * Настройки — только из .env (создаётся с значениями по умолчанию при первом запуске). Изменить — командой node scripts/set-env.js KEY=value
  */
-require('dotenv').config();
-
-const { isConfigured, getDbConfig } = require('./src/common/config');
+require('./src/common/envLoader').loadEnv();
+const { getDbConfig } = require('./src/common/envLoader');
 const { deploy } = require('./src/db/deploy');
 const { startApi, stopApi } = require('./src/api/app');
 
 const DEFAULT_PORT = 3000;
 
 async function main() {
-  if (!(await isConfigured())) {
-    console.error('Конфигурация не задана.');
-    console.error('Создайте конфиг: node scripts/setup-cli.js');
-    console.error('Либо создайте вручную JSON-файл с ключом dbConfig (host, port, user, password, database, apiPort).');
-    process.exit(1);
-  }
-
-  const config = await getDbConfig();
+  const config = getDbConfig();
   const port = config.apiPort ?? DEFAULT_PORT;
 
   await deploy();

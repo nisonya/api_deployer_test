@@ -1,4 +1,5 @@
 
+require('../src/common/envLoader').loadEnv();
 const path = require('path');
 const { runCliTask } = require('./cli-utils');
 const { exportSeed } = require('../src/main/ipcHandlers');

@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { getPool } = require('../../db/connection');
+const { getAccessSecret } = require('../jwtSecrets');
 
 
 const authMiddleware = async (req, res, next) => {
@@ -10,7 +11,11 @@ const authMiddleware = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+    const secret = getAccessSecret();
+    if (!secret) {
+      return res.status(500).json({ error: 'JWT не настроен (задайте JWT_ACCESS_SECRET/JWT_REFRESH_SECRET в env или перезапустите API)' });
+    }
+    const decoded = jwt.verify(token, secret);
 
     const pool = await getPool();
     const [rows] = await pool.query(

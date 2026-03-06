@@ -1,8 +1,12 @@
 
 function loadEnv() {
   try {
-    require('dotenv').config();
-  } catch (_) {}
+    require('../src/common/envLoader').loadEnv();
+  } catch (_) {
+    try {
+      require('dotenv').config();
+    } catch (_) {}
+  }
 }
 
 function parsePort(str, defaultValue) {

@@ -1,7 +1,7 @@
 const { registerHandlers } = require('../../src/main/ipcHandlers');
 const { getApiServer, setApiServer } = require('../../src/main/state');
 const { startApi, stopApi } = require('../../src/api/app');
-const { getDbConfig, setDbConfig, updateApiPort } = require('../../src/common/config');
+const { getDbConfig, setDbConfig, updateApiPort } = require('../../src/common/envLoader');
 const { getPool } = require('../../src/db/connection');
 const { createSetupWindow, createBackupWindow } = require('../../src/main/windows');
 const fs = require('fs').promises;
@@ -27,7 +27,7 @@ jest.mock('../../src/api/app', () => ({
   stopApi: jest.fn(),
 }));
 
-jest.mock('../../src/common/config', () => ({
+jest.mock('../../src/common/envLoader', () => ({
   getDbConfig: jest.fn(),
   setDbConfig: jest.fn(),
   updateApiPort: jest.fn(),
