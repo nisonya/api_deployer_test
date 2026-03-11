@@ -191,6 +191,8 @@ input:checked ~ .off-text {
   max-width: 600px;
   margin: 0 auto;
   padding: 20px;
+  min-height: 100%;
+  box-sizing: border-box;
 }
 
 /* Вкладки — тонкие, как настоящие табы */
@@ -275,7 +277,7 @@ form {
 
 .form-group {
   max-width: 400px;
-  min-width: 400px;
+  min-width: min(400px, 100%);
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -291,8 +293,8 @@ form {
 }
 
 .form-group input {
-  width: 400px; 
-  max-width: 100%;
+  width: 100%;
+  max-width: 400px;
   padding: 12px 14px;
   font-size: 1rem;
   background: #f8f8f8;

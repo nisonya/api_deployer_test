@@ -23,7 +23,7 @@
     "test:all": "npm run test:sync && npm run test:async",
     "test:auth": "jest tests/api/auth.test.js",
     "test:preload": "jest tests/preload.test.js",
-    "doc:word": "node scripts/md-to-docx.js"
+    "doc:word": "node scripts/api-doc-to-docx.js"
   },
   "build": {
     "appId": "com.kvant.server",

@@ -1,4 +1,4 @@
-const { BrowserWindow, app } = require('electron');
+const { BrowserWindow, app, screen } = require('electron');
 const path = require('path');
 const { isConfigured } = require('../common/envLoader');
 const { log: mainLog } = require('./mainLog');
@@ -10,6 +10,30 @@ function getRendererPath(relativePath) {
   return path.join(app.getAppPath(), 'renderer', relativePath);
 }
 
+/**
+ * Ограничивает размер окна доступной областью экрана.
+ * @param {number} desiredWidth - желаемая ширина
+ * @param {number} desiredHeight - желаемая высота
+ * @param {number} [maxPercent=0.9] - максимум от экрана (0.9 = 90%)
+ * @returns {{ width, height, minWidth, minHeight, maxWidth, maxHeight }}
+ */
+function getWindowBounds(desiredWidth, desiredHeight, maxPercent = 0.9) {
+  const primary = screen.getPrimaryDisplay();
+  const workArea = primary.workAreaSize;
+  const maxW = Math.floor(workArea.width * maxPercent);
+  const maxH = Math.floor(workArea.height * maxPercent);
+  const width = Math.min(desiredWidth, maxW);
+  const height = Math.min(desiredHeight, maxH);
+  return {
+    width,
+    height,
+    minWidth: Math.min(320, width),
+    minHeight: Math.min(400, height),
+    maxWidth: maxW,
+    maxHeight: maxH
+  };
+}
+
 function attachLoadErrorLog(win, label) {
   win.webContents.on('did-fail-load', (_e, errorCode, errorDescription, validatedURL) => {
     mainLog(`${label} did-fail-load: code=${errorCode} ${errorDescription} url=${validatedURL}`, true);
@@ -19,15 +43,17 @@ function attachLoadErrorLog(win, label) {
 function createMainWindow() {
   const htmlPath = getRendererPath(path.join('html', 'main_window.html'));
   mainLog('createMainWindow loading: ' + htmlPath);
+  const bounds = getWindowBounds(400, 700);
   mainWindow = new BrowserWindow({
-    width: 400,
-    height: 700,
+    ...bounds,
+    resizable: true,
     webPreferences: {
       preload: path.join(__dirname, './preload.js'),
       contextIsolation: true,
       nodeIntegration: false
     }
   });
+  mainWindow.center();
   attachLoadErrorLog(mainWindow, 'main');
   mainWindow.loadFile(htmlPath).catch((err) => mainLog('main loadFile error: ' + (err.stack || err), true));
   mainWindow.removeMenu();
@@ -37,18 +63,19 @@ function createMainWindow() {
 function createSetupWindow(parentWindow = null) {
   const htmlPath = getRendererPath(path.join('html', 'db_setup.html'));
   mainLog('createSetupWindow loading: ' + htmlPath);
+  const bounds = getWindowBounds(600, 900);
   const win = new BrowserWindow({
-    width: 600,
-    height: 900,
+    ...bounds,
     parent: parentWindow,
-    modal: true,
-    resizable: false,
+    modal: !!parentWindow,
+    resizable: true,
     webPreferences: {
       preload: path.join(__dirname, './preload.js'),
       contextIsolation: true,
       nodeIntegration: false
     }
   });
+  if (!parentWindow) win.center();
   attachLoadErrorLog(win, 'setup');
   win.loadFile(htmlPath).catch((err) => mainLog('setup loadFile error: ' + (err.stack || err), true));
   win.on('closed', () => {
@@ -60,16 +87,17 @@ function createSetupWindow(parentWindow = null) {
 
 function createBackupWindow(parentWindow = null) {
   const htmlPath = getRendererPath(path.join('html', 'backup.html'));
+  const bounds = getWindowBounds(600, 400);
   const win = new BrowserWindow({
-    width: 600,
-    height: 400,
+    ...bounds,
     parent: parentWindow,
-    modal: true,
-    resizable: false,
+    modal: !!parentWindow,
+    resizable: true,
     webPreferences: {
       preload: path.join(__dirname, './preload.js')
     }
   });
+  if (!parentWindow) win.center();
   attachLoadErrorLog(win, 'backup');
   win.loadFile(htmlPath).catch((err) => mainLog('backup loadFile error: ' + (err.stack || err), true));
   win.on('closed', () => {});
