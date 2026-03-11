@@ -72,11 +72,25 @@ function getHttpsOptions() {
   process.env.SSL_KEY = pems.private;
   process.env.SSL_CERT = pems.cert;
   try {
-    require('../common/envLoader').writeEnvVars({ SSL_KEY: pems.private, SSL_CERT: pems.cert });
+    const { writeEnvVars } = require('../common/envLoader');
+    writeEnvVars({ SSL_KEY: normalizePem(pems.private).toString('utf8'), SSL_CERT: normalizePem(pems.cert).toString('utf8') });
   } catch (e) {
     // .env может быть недоступен при тестах
   }
   return cachedHttpsOptions;
 }
 
-module.exports = { getHttpsOptions, getCertsDir, getKeyCertPaths };
+/** Сбрасывает кэш и повреждённые сертификаты в env. Следующий вызов getHttpsOptions перегенерирует. */
+function clearAndRegenerate() {
+  cachedHttpsOptions = null;
+  delete process.env.SSL_KEY;
+  delete process.env.SSL_CERT;
+  try {
+    const { writeEnvVars } = require('../common/envLoader');
+    writeEnvVars({ SSL_KEY: undefined, SSL_CERT: undefined });
+  } catch (e) {
+    // игнорируем
+  }
+}
+
+module.exports = { getHttpsOptions, getCertsDir, getKeyCertPaths, clearAndRegenerate, normalizePem };

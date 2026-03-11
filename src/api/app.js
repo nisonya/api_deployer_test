@@ -5,7 +5,7 @@ const https = require('https');
 const crypto = require('crypto');
 const { deploy } = require('../db/deploy');
 const { getDbConfig, writeEnvVars } = require('../common/envLoader');
-const { getHttpsOptions } = require('./certs');
+const { getHttpsOptions, clearAndRegenerate } = require('./certs');
 const { setSecrets } = require('./jwtSecrets');
 
 const app = express();
@@ -59,16 +59,30 @@ async function startApi(port = DEFAULT_API_PORT) {
 
   ensureJwtSecrets();
 
-  server = https.createServer(getHttpsOptions(), app);
   const host = '0.0.0.0';
 
-  return new Promise((resolve, reject) => {
-    server.listen(apiPort, host, () => {
-      console.log(`API is running on https://${host}:${apiPort}`);
-      resolve(server);
+  function doListen(srv) {
+    return new Promise((resolve, reject) => {
+      srv.listen(apiPort, host, () => {
+        console.log(`API is running on https://${host}:${apiPort}`);
+        resolve(srv);
+      });
+      srv.on('error', reject);
     });
-    server.on('error', reject);
-  });
+  }
+
+  try {
+    server = https.createServer(getHttpsOptions(), app);
+    return doListen(server);
+  } catch (err) {
+    const isPemError = err?.message?.includes('BAD_END_LINE') || err?.message?.includes('PEM');
+    if (isPemError) {
+      clearAndRegenerate();
+      server = https.createServer(getHttpsOptions(), app);
+      return doListen(server);
+    }
+    throw err;
+  }
 }
 
 function stopApi() {

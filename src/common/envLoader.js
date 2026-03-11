@@ -61,13 +61,17 @@ function writeEnvVars(vars) {
     parsed = dotenv.parse(content);
   }
   for (const [k, v] of Object.entries(vars)) {
-    if (v !== undefined && v !== null) {
+    if (v === undefined) {
+      delete parsed[k];
+    } else if (v !== null) {
       parsed[k] = String(v);
     }
   }
   const lines = Object.entries(parsed).map(([k, v]) => {
     if (v.includes('\n') || v.includes('"') || v.includes(' ')) {
-      const escaped = v.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+      // Нормализуем переводы строк перед записью (PEM и др.): только LF, не CRLF
+      const normalized = String(v).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      const escaped = normalized.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
       return `${k}="${escaped}"`;
     }
     return `${k}=${v}`;
