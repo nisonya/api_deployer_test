@@ -1,10 +1,12 @@
-/**
- * TLS только из env или генерация при старте с сохранением в .env.
- * Приоритет: 1) env SSL_KEY/SSL_CERT, 2) файлы key.pem/cert.pem, 3) сгенерировать и записать в .env.
- */
+
 const fs = require('fs');
 const path = require('path');
 const selfsigned = require('selfsigned');
+
+function normalizePem(bufOrStr) {
+  const str = Buffer.isBuffer(bufOrStr) ? bufOrStr.toString('utf8') : String(bufOrStr);
+  return Buffer.from(str.replace(/\r\n/g, '\n').replace(/\r/g, '\n'), 'utf8');
+}
 
 const projectRoot = path.resolve(__dirname, '../..');
 
@@ -44,8 +46,8 @@ function getHttpsOptions() {
   const envCert = process.env.SSL_CERT;
   if (envKey && envCert) {
     cachedHttpsOptions = {
-      key: Buffer.from(envKey, 'utf8'),
-      cert: Buffer.from(envCert, 'utf8')
+      key: normalizePem(envKey),
+      cert: normalizePem(envCert)
     };
     return cachedHttpsOptions;
   }
@@ -53,8 +55,8 @@ function getHttpsOptions() {
   const keyCertPaths = getKeyCertPaths();
   if (keyCertPaths) {
     cachedHttpsOptions = {
-      key: fs.readFileSync(keyCertPaths.key),
-      cert: fs.readFileSync(keyCertPaths.cert)
+      key: normalizePem(fs.readFileSync(keyCertPaths.key)),
+      cert: normalizePem(fs.readFileSync(keyCertPaths.cert))
     };
     return cachedHttpsOptions;
   }
