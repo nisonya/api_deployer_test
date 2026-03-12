@@ -11,7 +11,7 @@
     "export-db": "node scripts/export-db.js",
     "import-db": "node scripts/import-db.js",
     "build:win": "electron-builder --win",
-    "build:linux": "electron-builder --linux",
+    "build:linux": "node scripts/ensure-linux-icon.js && electron-builder --linux",
     "build:linux-headless": "node scripts/build-headless.js",
     "build:all": "electron-builder --win --linux",
     "build": "electron-builder",
@@ -51,6 +51,7 @@
       "allowToChangeInstallationDirectory": true
     },
     "linux": {
+      "icon": "build/icon.png",
       "target": [
         "AppImage"
       ]
