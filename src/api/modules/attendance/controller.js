@@ -1,5 +1,6 @@
 const { withConnection } = require('../../helpers/db');
 const { parsePositiveId } = require('../../helpers/validation');
+const { sendSuccess, sendError } = require('../../helpers/http');
 
 async function fetchAttByGroup(conn, groupId) {
   const [rows] = await conn.query(
@@ -57,14 +58,6 @@ async function upsertAttendance(conn, studentId, groupId, date, presence) {
   }
 }
 
-function sendSuccess(res, data, status = 200) {
-  res.status(status).json({ success: true, data });
-}
-
-function sendError(res, status, error) {
-  res.status(status).json({ success: false, error });
-}
-
 exports.getByGroup = async (req, res) => {
   const id = parsePositiveId(req.params.id);
   if (id == null) return sendError(res, 400, 'Некорректный id группы.');
@@ -111,8 +104,10 @@ exports.newAttendance = async (req, res) => {
   const studentId = parsePositiveId(student_id);
   const groupId = parsePositiveId(group_id);
   const presenceNum = presence != null ? parseInt(presence, 10) : null;
-  if (studentId == null || groupId == null || !date_of_lesson || presenceNum == null) {
-    return sendError(res, 400, 'Нужны: student_id, group_id, date_of_lesson, presence.');
+  const presenceOk =
+    presenceNum === 0 || presenceNum === 1;
+  if (studentId == null || groupId == null || !date_of_lesson || !presenceOk) {
+    return sendError(res, 400, 'Нужны: student_id, group_id, date_of_lesson, presence (0 или 1).');
   }
   try {
     await withConnection((conn) =>

@@ -4,33 +4,35 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { getPool } = require('../../../db/connection');
 const { getAccessSecret, getRefreshSecret } = require('../../jwtSecrets');
+const { sendSuccess, sendError } = require('../../helpers/http');
 
 router.post('/login', async (req, res) => {
   const { login, password } = req.body;
 
   if (!login || !password) {
-    return res.status(400).json({ error: 'Введите логин и пароль' });
+    return sendError(res, 400, 'Введите логин и пароль');
   }
 
   const accessSecret = getAccessSecret();
   const refreshSecret = getRefreshSecret();
   if (!accessSecret || !refreshSecret) {
     console.error('Ошибка логина: JWT-секреты не заданы (задайте JWT_ACCESS_SECRET и JWT_REFRESH_SECRET в env или они сгенерируются при старте API)');
-    return res.status(500).json({
-      error: 'Ошибка сервера',
-      details: 'Не настроены секреты JWT. Задайте в переменных окружения JWT_ACCESS_SECRET и JWT_REFRESH_SECRET (или JWT_SECRET) — либо перезапустите API, чтобы они сгенерировались.'
-    });
+    return sendError(
+      res,
+      500,
+      'Не настроены секреты JWT. Задайте в переменных окружения JWT_ACCESS_SECRET и JWT_REFRESH_SECRET (или JWT_SECRET) — либо перезапустите API, чтобы они сгенерировались.'
+    );
   }
 
   try {
     const pool = await getPool();
     const [rows] = await pool.query(
-      'SELECT id, password_hash, access_level_id FROM profile WHERE login = ?',
+      'SELECT id, employee_id, login, password_hash, access_level_id FROM profile WHERE login = ?',
       [login]
     );
 
     if (rows.length === 0) {
-      return res.status(401).json({ error: 'Неверный логин или пароль' });
+      return sendError(res, 401, 'Неверный логин или пароль');
     }
 
     const user = rows[0];
@@ -38,7 +40,7 @@ router.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!isMatch) {
-      return res.status(401).json({ error: 'Неверный логин или пароль' });
+      return sendError(res, 401, 'Неверный логин или пароль');
     }
 
     const accessToken = jwt.sign(
@@ -68,20 +70,24 @@ await pool.query(
       maxAge: 3600 * 1000
     });
 
-    res.json({
-      success: true,
+    sendSuccess(res, {
       accessToken,
-      refreshToken, 
-      user: { 
-        id: user.id, 
-        accessLevel: user.access_level_id 
-      }
+      refreshToken,
+      user: {
+        id: user.employee_id || user.id,
+        employee_id: user.employee_id || null,
+        id_employees: user.employee_id || null,
+        profile_id: user.id,
+        login: user.login,
+        accessLevel: user.access_level_id,
+      },
     });
   } catch (err) {
     console.error('Ошибка логина:', err.message, err.stack);
-    const payload = { error: 'Ошибка сервера' };
-    if (process.env.NODE_ENV !== 'production') payload.details = err.message;
-    res.status(500).json(payload);
+    if (process.env.NODE_ENV !== 'production') {
+      return res.status(500).json({ success: false, error: 'Ошибка сервера', details: err.message });
+    }
+    sendError(res, 500, 'Ошибка сервера');
   }
 });
 
@@ -89,7 +95,7 @@ router.post('/refresh', async (req, res) => {
   const { refreshToken } = req.body;
 
   if (!refreshToken) {
-    return res.status(401).json({ error: 'Требуется refresh-токен' });
+    return sendError(res, 401, 'Требуется refresh-токен');
   }
 
   try {
@@ -102,18 +108,18 @@ router.post('/refresh', async (req, res) => {
     );
 
     if (rows.length === 0) {
-      return res.status(401).json({ error: 'Недействительный или просроченный refresh-токен' });
+      return sendError(res, 401, 'Недействительный или просроченный refresh-токен');
     }
 
     const profileId = rows[0].profile_id;
 
     const [userRows] = await pool.query(
-      'SELECT id, access_level_id FROM profile WHERE id = ?',
+      'SELECT id, employee_id, login, access_level_id FROM profile WHERE id = ?',
       [profileId]
     );
 
     if (userRows.length === 0) {
-      return res.status(401).json({ error: 'Профиль не найден' });
+      return sendError(res, 401, 'Профиль не найден');
     }
 
     const user = userRows[0];
@@ -134,10 +140,20 @@ router.post('/refresh', async (req, res) => {
       maxAge: 3600 * 1000
     });
 
-    res.json({ success: true, accessToken: newAccessToken });
+    sendSuccess(res, {
+      accessToken: newAccessToken,
+      user: {
+        id: user.employee_id || user.id,
+        employee_id: user.employee_id || null,
+        id_employees: user.employee_id || null,
+        profile_id: user.id,
+        login: user.login,
+        accessLevel: user.access_level_id
+      }
+    });
   } catch (err) {
     console.error('Ошибка рефреша:', err);
-    res.status(401).json({ error: 'Недействительный refresh-токен' });
+    sendError(res, 401, 'Недействительный refresh-токен');
   }
 });
 
@@ -153,7 +169,7 @@ router.post('/logout', async (req, res) => {
   }
 
   res.clearCookie('access_token');
-  res.json({ success: true });
+  sendSuccess(res, { ok: true });
 });
 
 module.exports = router;

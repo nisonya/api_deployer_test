@@ -52,6 +52,27 @@ describe('Employees API', () => {
     });
   });
 
+  describe('GET /with-inactive', () => {
+    test('возвращает всех сотрудников, включая неактивных', async () => {
+      const fakeRows = [
+        { id_employees: 1, first_name: 'Иван', second_name: 'Иванов', is_active: 1 },
+        { id_employees: 2, first_name: 'Пётр', second_name: 'Петров', is_active: 0 }
+      ];
+      mockQuery.mockResolvedValueOnce([fakeRows, []]);
+      const res = await request(app).get('/api/employees/with-inactive');
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveLength(2);
+      expect(res.body.data[1]).toMatchObject({ is_active: 0 });
+    });
+    test('SQL не содержит фильтр is_active', async () => {
+      mockQuery.mockResolvedValueOnce([[], []]);
+      await request(app).get('/api/employees/with-inactive');
+      const sql = mockQuery.mock.calls[0][0];
+      expect(sql).not.toContain('is_active = 1');
+    });
+  });
+
   describe('GET /schedule', () => {
     test('возвращает расписание', async () => {
       mockQuery.mockResolvedValueOnce([[{ id_employees: 1, employee_name: 'Иванов Иван' }], []]);
@@ -142,6 +163,7 @@ describe('Employees API', () => {
       const res = await request(app).post('/api/employees/').send({ event_id: 1, employee_id: 5 });
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
+      expect(res.body.data.message).toMatch(/назначен/);
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO responsible_for_part_events'),
         expect.any(Array)
@@ -156,7 +178,7 @@ describe('Employees API', () => {
     test('400 при невалидных id', async () => {
       const res = await request(app).post('/api/employees/').send({ event_id: 0, employee_id: 1 });
       expect(res.status).toBe(400);
-      expect(res.body.message).toMatch(/положительными/);
+      expect(res.body.error).toMatch(/положительными/);
     });
     test('409 при дубликате назначения', async () => {
       const err = new Error('Duplicate');
@@ -187,10 +209,46 @@ describe('Employees API', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data).toMatchObject({ id: 10 });
     });
+    test('успех без отчества — 201', async () => {
+      mockQuery.mockResolvedValueOnce([{ insertId: 11 }, []]).mockResolvedValueOnce([{}, []]);
+      const res = await request(app)
+        .post('/api/employees/add')
+        .send({
+          first_name: 'Пётр',
+          second_name: 'Петров',
+          date_of_birth: '1991-05-05',
+          position: 2,
+          login: 'petrovnp',
+          password: 'secret12',
+          access_level_id: 1
+        });
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toMatchObject({ id: 11 });
+    });
     test('400 без обязательных полей', async () => {
       const res = await request(app).post('/api/employees/add').send({ first_name: 'Иван' });
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
+    });
+    test('409 при дубликате логина', async () => {
+      const err = new Error('Duplicate');
+      err.code = 'ER_DUP_ENTRY';
+      mockQuery.mockResolvedValueOnce([{ insertId: 10 }, []]).mockRejectedValueOnce(err);
+      const body = {
+        first_name: 'Иван',
+        second_name: 'Иванов',
+        patronymic: 'Иванович',
+        date_of_birth: '1990-01-01',
+        position: 1,
+        login: 'taken',
+        password: 'secret12',
+        access_level_id: 2,
+      };
+      const res = await request(app).post('/api/employees/add').send(body);
+      expect(res.status).toBe(409);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toMatch(/Логин уже занят/);
     });
   });
 
@@ -241,6 +299,91 @@ describe('Employees API', () => {
       const res = await request(app).put('/api/employees/size').send({ id: 999, size: 'L' });
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('Сотрудник не найден.');
+    });
+  });
+
+  describe('DELETE /:id (deleteEmployee)', () => {
+    test('успешно удаляет сотрудника', async () => {
+      mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
+      const res = await request(app).delete('/api/employees/1');
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toMatchObject({ ok: true });
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM employees'),
+        [1]
+      );
+    });
+    test('404 при отсутствии', async () => {
+      mockQuery.mockResolvedValueOnce([{ affectedRows: 0 }, []]);
+      const res = await request(app).delete('/api/employees/999');
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Сотрудник не найден.');
+    });
+    test('400 при невалидном id', async () => {
+      const res = await request(app).delete('/api/employees/0');
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Некорректный id.');
+    });
+    test('500 при ошибке БД', async () => {
+      mockQuery.mockRejectedValueOnce(new Error('DB'));
+      const res = await request(app).delete('/api/employees/1');
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe('Не удалось удалить сотрудника.');
+    });
+  });
+
+  describe('PUT /:id (updateEmployee)', () => {
+    const validBody = {
+      first_name: 'Иван',
+      second_name: 'Иванов',
+      date_of_birth: '1990-05-15',
+      patronymic: 'Петрович',
+      position: 2,
+      contact: '+7 999',
+      education: 'Высшее',
+    };
+
+    test('обновляет сотрудника', async () => {
+      mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
+      const res = await request(app).put('/api/employees/1').send(validBody);
+      expect(res.status).toBe(200);
+      expect(res.body.data.ok).toBe(true);
+    });
+    test('обновляет с is_active', async () => {
+      mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
+      const res = await request(app).put('/api/employees/1').send({ ...validBody, is_active: 0 });
+      expect(res.status).toBe(200);
+      const sql = mockQuery.mock.calls[0][0];
+      expect(sql).toContain('is_active = ?');
+    });
+    test('без is_active SQL не содержит is_active', async () => {
+      mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
+      await request(app).put('/api/employees/1').send(validBody);
+      const sql = mockQuery.mock.calls[0][0];
+      expect(sql).not.toContain('is_active = ?');
+    });
+    test('404 при отсутствии', async () => {
+      mockQuery.mockResolvedValueOnce([{ affectedRows: 0 }, []]);
+      const res = await request(app).put('/api/employees/999').send(validBody);
+      expect(res.status).toBe(404);
+    });
+    test('400 без first_name', async () => {
+      const res = await request(app).put('/api/employees/1').send({ second_name: 'Иванов', date_of_birth: '1990-01-01' });
+      expect(res.status).toBe(400);
+    });
+    test('400 без second_name', async () => {
+      const res = await request(app).put('/api/employees/1').send({ first_name: 'Иван', date_of_birth: '1990-01-01' });
+      expect(res.status).toBe(400);
+    });
+    test('400 при невалидном id', async () => {
+      const res = await request(app).put('/api/employees/0').send(validBody);
+      expect(res.status).toBe(400);
+    });
+    test('position null допускается', async () => {
+      mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
+      const res = await request(app).put('/api/employees/1').send({ ...validBody, position: null });
+      expect(res.status).toBe(200);
     });
   });
 });

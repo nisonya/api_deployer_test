@@ -143,8 +143,10 @@ DELIMITER ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `employees_BEFORE_DELETE` BEFORE DELETE ON `employees` FOR EACH ROW BEGIN
 SET SQL_SAFE_UPDATES = 0;
-	DELETE FROM `kvantorium_schemas`.`profile` WHERE `employee_id` = OLD.id_employees;
-	DELETE FROM `kvantorium_schemas`.`kvantum_mentor` WHERE `id_mentor` = OLD.id_employees;
+	DELETE FROM `profile`                     WHERE `employee_id` = OLD.id_employees;
+	DELETE FROM `employees_schedule`          WHERE `idEmployees` = OLD.id_employees;
+	DELETE FROM `responsible_for_org_events`  WHERE `id_employee` = OLD.id_employees;
+	DELETE FROM `responsible_for_part_events` WHERE `id_employee` = OLD.id_employees;
 SET SQL_SAFE_UPDATES = 1;
 END */;;
 DELIMITER ;
@@ -183,45 +185,38 @@ CREATE TABLE `employees_schedule` (
 /*!50003 SET sql_mode              = 'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `employees_schedule_BEFORE_INSERT` BEFORE INSERT ON `employees_schedule` FOR EACH ROW BEGIN
-Select startTime into @newstart from view_schedule where idlesson = new.idSchedule;
-Select endTime into @newend from view_schedule where idlesson = new.idSchedule;
-if ((select `type`from view_schedule where idlesson = New.idSchedule) != 3) then
-if ((select position from employees where id_employees = New.idEmployees) != 2)then
-signal SQLSTATE VALUE '45000' SET MESSAGE_TEXT = 'This employee is not a teacher';
-else  if( exists(select 1 from employees_schedule where 
-	idSchedule != new.idSchedule
-    and idEmployees = new.idEmployees
-    and exists(select 1 From view_schedule where 
-	idlesson = idSchedule
-	and day = (Select day from schedule where idlesson = new.idSchedule)
-    and(@newstart >= startTime and @newstart < endTime
-	or @newend > startTime and @newend <= endTime
-	or startTime >= @newstart and startTime < @newend
-	or endTime > @newstart and endTime <= @newend)))) then 
-	signal SQLSTATE VALUE '45000' SET MESSAGE_TEXT = 'You can not add a lesson for this time';
-end if;
-end if;
+  DECLARE v_start TIME;
+  DECLARE v_end TIME;
+  DECLARE v_day INT UNSIGNED;
+  DECLARE v_group INT UNSIGNED;
+  DECLARE v_pos INT UNSIGNED;
 
-IF (exists(select 1 From view_schedule where
-	idlesson != New.idSchedule
-	and view_schedule.day = (select day from view_schedule where idlesson = idSchedule)
-	and(@newstart >= startTime and @newstart < endTime
-	or @newend > startTime and @newend <= endTime
-	or startTime >= @newstart and startTime < @newend
-	or endTime > @newstart and endTime <= @newend))) then 
-	signal SQLSTATE VALUE '45000' SET MESSAGE_TEXT = 'You can not add a lesson for this time';
-else IF (exists(select 1 From schedule where 
-	idlesson != New.idSchedule
-	and view_schedule.day = (select day from view_schedule where idlesson = idSchedule)
-    and view_schedule.`group` = (select `group` from view_schedule where idlesson = idSchedule)
-	and(@newstart >= startTime and @newstart < endTime
-	or @newend > startTime and @newend <= endTime
-	or startTime >= @newstart and startTime < @newend
-	or endTime > @newstart and endTime <= @newend))) then 
-	signal SQLSTATE VALUE '45000' SET MESSAGE_TEXT = 'At the moment, this group already has a lesson';
- end if;
-end if;
-end if;
+  SELECT s.startTime, s.endTime, s.`day`, s.`group`
+    INTO v_start, v_end, v_day, v_group
+  FROM schedule s
+  WHERE s.idlesson = NEW.idSchedule;
+
+  SELECT e.`position` INTO v_pos FROM employees e WHERE e.id_employees = NEW.idEmployees LIMIT 1;
+
+  IF v_pos IS NULL OR v_pos <> 2 THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Сотрудник не является преподавателем (нужна должность с position = 2).';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM schedule s
+    WHERE s.idlesson <> NEW.idSchedule
+      AND s.`day` = v_day
+      AND s.`group` = v_group
+      AND (
+        (v_start >= s.startTime AND v_start < s.endTime) OR
+        (v_end > s.startTime AND v_end <= s.endTime) OR
+        (s.startTime >= v_start AND s.startTime < v_end) OR
+        (s.endTime > v_start AND s.endTime <= v_end)
+      )
+  ) THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'У группы в этот день уже есть занятие, пересекающееся по времени.';
+  END IF;
 END */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -266,7 +261,7 @@ DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `event_plan_organization_BEFORE_UPDATE` BEFORE UPDATE ON `event_plan_organization` FOR EACH ROW BEGIN
 SET SQL_SAFE_UPDATES = 0;
 if(DATE(old.dates_of_event)!=DATE(new.dates_of_event)) THEN BEGIN
-	DELETE FROM `kvantorium_schemas`.`rent` WHERE `id_event` = OLD.id;
+	DELETE FROM `kvant`.`rent` WHERE `id_event` = OLD.id;
 END; END IF;
 SET SQL_SAFE_UPDATES = 1;
 END */;;
@@ -286,8 +281,8 @@ DELIMITER ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `event_plan_organization_BEFORE_DELETE` BEFORE DELETE ON `event_plan_organization` FOR EACH ROW BEGIN
 SET SQL_SAFE_UPDATES = 0;
-	DELETE FROM `kvantorium_schemas`.`responsible_for_org_events` WHERE `id_event` = OLD.id;
-	DELETE FROM `kvantorium_schemas`.`rent` WHERE `id_event` = OLD.id;
+	DELETE FROM `kvant`.`responsible_for_org_events` WHERE `id_event` = OLD.id;
+	DELETE FROM `kvant`.`rent` WHERE `id_event` = OLD.id;
 SET SQL_SAFE_UPDATES = 1;
 END */;;
 DELIMITER ;
@@ -335,7 +330,7 @@ CREATE TABLE `event_plan_participation` (
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `event_plan_participation_BEFORE_DELETE` BEFORE DELETE ON `event_plan_participation` FOR EACH ROW BEGIN
 SET SQL_SAFE_UPDATES = 0;
-	DELETE FROM `kvantorium_schemas`.`responsible_for_part_events` WHERE `id_event` = OLD.id;
+	DELETE FROM `kvant`.`responsible_for_part_events` WHERE `id_event` = OLD.id;
 SET SQL_SAFE_UPDATES = 1;
 END */;;
 DELIMITER ;
@@ -358,6 +353,11 @@ CREATE TABLE `form_of_holding` (
   UNIQUE KEY `id_UNIQUE` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+INSERT INTO `form_of_holding` (`id`, `name`) VALUES
+  (1, 'очно'),
+  (2, 'заочно'),
+  (3, 'очно/заочно');
 
 --
 -- Temporary view structure for view `full_profile`
@@ -405,7 +405,7 @@ CREATE TABLE `groups` (
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `groups_BEFORE_DELETE` BEFORE DELETE ON `groups` FOR EACH ROW BEGIN
 Set SQL_SAFE_UPDATES = 0;
-delete From `kvantorium_schemas`.`students_groups` where students_groups.idGroup = Old.idGroups;
+delete From `kvant`.`students_groups` where students_groups.idGroup = Old.idGroups;
 Set SQL_SAFE_UPDATES = 1;
 END */;;
 DELIMITER ;
@@ -454,7 +454,6 @@ DROP TABLE IF EXISTS `position`;
 CREATE TABLE `position` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(150) NOT NULL,
-  `discription` varchar(300) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -672,6 +671,9 @@ CREATE TABLE `responsible_for_part_events` (
   `mark_of_sending_an_application` tinyint(1) NOT NULL DEFAULT '0',
   `result_of_responsible` varchar(250) DEFAULT NULL,
   `date_of_result` date DEFAULT NULL,
+  `responsible_participants` int unsigned DEFAULT NULL COMMENT 'вклад ответственного: участники',
+  `responsible_winners` int unsigned DEFAULT NULL COMMENT 'вклад: победители',
+  `responsible_runner_up` int unsigned DEFAULT NULL COMMENT 'вклад: призёры',
   PRIMARY KEY (`id_event`,`id_employee`),
   KEY `employee_key_idx` (`id_employee`),
   CONSTRAINT `employee_key1` FOREIGN KEY (`id_employee`) REFERENCES `employees` (`id_employees`),
@@ -687,8 +689,32 @@ CREATE TABLE `responsible_for_part_events` (
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `responsible_for_part_events_BEFORE_INSERT` BEFORE INSERT ON `responsible_for_part_events` FOR EACH ROW BEGIN
+  IF (
+    (NEW.result_of_responsible IS NULL OR TRIM(NEW.result_of_responsible) = '')
+    AND NEW.responsible_participants IS NULL
+    AND NEW.responsible_winners IS NULL
+    AND NEW.responsible_runner_up IS NULL
+  ) THEN
+    SET NEW.date_of_result = NULL;
+  ELSE
+    SET NEW.date_of_result = CURRENT_DATE();
+  END IF;
+END */;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `responsible_for_part_events_BEFORE_UPDATE` BEFORE UPDATE ON `responsible_for_part_events` FOR EACH ROW BEGIN
- IF ISNULL(NEW.result_of_responsible) = 0 THEN
+  IF (
+    (NEW.result_of_responsible IS NULL OR TRIM(NEW.result_of_responsible) = '')
+    AND NEW.responsible_participants IS NULL
+    AND NEW.responsible_winners IS NULL
+    AND NEW.responsible_runner_up IS NULL
+  ) THEN
+    SET NEW.date_of_result = NULL;
+  ELSEIF NOT (
+    OLD.result_of_responsible <=> NEW.result_of_responsible
+    AND OLD.responsible_participants <=> NEW.responsible_participants
+    AND OLD.responsible_winners <=> NEW.responsible_winners
+    AND OLD.responsible_runner_up <=> NEW.responsible_runner_up
+  ) THEN
     SET NEW.date_of_result = CURRENT_DATE();
   END IF;
 END */;;
@@ -697,6 +723,86 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `event_organization_document`
+--
+
+DROP TABLE IF EXISTS `event_organization_document`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `event_organization_document` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `id_event` int unsigned NOT NULL,
+  `storage_path` varchar(1024) NOT NULL COMMENT 'путь относительно EVENT_DOCUMENTS_ROOT_ORG',
+  `original_filename` varchar(255) NOT NULL,
+  `mime_type` varchar(128) DEFAULT NULL,
+  `size_bytes` bigint unsigned DEFAULT NULL,
+  `uploaded_by_profile_id` int unsigned DEFAULT NULL,
+  `sort_order` int unsigned NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_eod_event` (`id_event`),
+  KEY `fk_eod_profile` (`uploaded_by_profile_id`),
+  CONSTRAINT `fk_eod_event` FOREIGN KEY (`id_event`) REFERENCES `event_plan_organization` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_eod_profile` FOREIGN KEY (`uploaded_by_profile_id`) REFERENCES `profile` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `event_participation_document`
+--
+
+DROP TABLE IF EXISTS `event_participation_document`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `event_participation_document` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `id_event` int unsigned NOT NULL,
+  `storage_path` varchar(1024) NOT NULL COMMENT 'путь относительно EVENT_DOCUMENTS_ROOT_PART',
+  `original_filename` varchar(255) NOT NULL,
+  `mime_type` varchar(128) DEFAULT NULL,
+  `size_bytes` bigint unsigned DEFAULT NULL,
+  `uploaded_by_profile_id` int unsigned DEFAULT NULL,
+  `sort_order` int unsigned NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_epd_event` (`id_event`),
+  KEY `fk_epd_profile` (`uploaded_by_profile_id`),
+  CONSTRAINT `fk_epd_event` FOREIGN KEY (`id_event`) REFERENCES `event_plan_participation` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_epd_profile` FOREIGN KEY (`uploaded_by_profile_id`) REFERENCES `profile` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `event_part_student_status` (справочник статусов)
+--
+
+DROP TABLE IF EXISTS `event_part_student_status`;
+CREATE TABLE `event_part_student_status` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Table structure for table `event_part_student` (ученики мероприятия участия)
+--
+
+DROP TABLE IF EXISTS `event_part_student`;
+CREATE TABLE `event_part_student` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `id_event` int unsigned NOT NULL,
+  `id_student` int unsigned NOT NULL,
+  `id_status` int unsigned NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_event_student` (`id_event`, `id_student`),
+  KEY `fk_eps_student` (`id_student`),
+  KEY `fk_eps_status` (`id_status`),
+  CONSTRAINT `fk_eps_event` FOREIGN KEY (`id_event`) REFERENCES `event_plan_participation` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_eps_student` FOREIGN KEY (`id_student`) REFERENCES `students` (`idStudent`) ON DELETE CASCADE,
+  CONSTRAINT `fk_eps_status` FOREIGN KEY (`id_status`) REFERENCES `event_part_student_status` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Table structure for table `room`
@@ -789,7 +895,7 @@ DELIMITER ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `students_AFTER_INSERT` AFTER INSERT ON `students` FOR EACH ROW BEGIN
 Set SQL_SAFE_UPDATES = 0;
-INSERT INTO `kvantorium_schemas`.`pixels` (`id_student`) VALUES (new.idStudent);
+INSERT INTO `kvant`.`pixels` (`id_student`) VALUES (new.idStudent);
 Set SQL_SAFE_UPDATES = 1;
 END */;;
 DELIMITER ;
@@ -830,9 +936,9 @@ DELIMITER ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `students_BEFORE_DELETE` BEFORE DELETE ON `students` FOR EACH ROW BEGIN
 Set SQL_SAFE_UPDATES = 0;
-delete From `kvantorium_schemas`.`students_groups` where students_groups.idStudent = Old.idStudent;
-delete From `kvantorium_schemas`.`participants_for_part_event` where participants_for_part_event.id_student = Old.idStudent;
-delete From `kvantorium_schemas`.`pixels` where pixels.id_student = Old.idStudent;
+delete From `kvant`.`students_groups` where students_groups.idStudent = Old.idStudent;
+delete From `kvant`.`participants_for_part_event` where participants_for_part_event.id_student = Old.idStudent;
+delete From `kvant`.`pixels` where pixels.id_student = Old.idStudent;
 Set SQL_SAFE_UPDATES = 1;
 END */;;
 DELIMITER ;
@@ -885,6 +991,11 @@ CREATE TABLE `types_of_organization` (
   PRIMARY KEY (`id_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+INSERT INTO `types_of_organization` (`id_type`, `name`) VALUES
+  (1, 'Комплексный план'),
+  (2, 'Гос. задние'),
+  (3, 'Внешние');
 
 --
 -- Temporary view structure for view `view_schedule`

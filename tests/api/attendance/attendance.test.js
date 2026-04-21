@@ -125,6 +125,19 @@ describe('Attendance API', () => {
       expect(res.body.success).toBe(false);
       expect(res.body.error).toMatch(/student_id, group_id, date_of_lesson, presence/);
     });
+    test('400 при presence не 0 и не 1', async () => {
+      const res = await request(app)
+        .post('/api/attendance/')
+        .send({
+          student_id: 1,
+          group_id: 2,
+          date_of_lesson: '2025-02-01',
+          presence: 2,
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toMatch(/0 или 1/);
+    });
     test('ошибка при невалидном student_id', async () => {
       const res = await request(app)
         .post('/api/attendance/')

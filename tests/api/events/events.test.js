@@ -43,6 +43,16 @@ describe('Events API', () => {
         expect(res.status).toBe(200);
         expect(res.body.data).toEqual([]);
       });
+      test('фильтр filters.type — id типа организации', async () => {
+        mockQuery.mockResolvedValueOnce([[], []]);
+        await request(app)
+          .post('/api/events/org/list')
+          .send({ filters: { type: 2 }, page: 1, limit: 10 });
+        const sql = mockQuery.mock.calls[0][0];
+        const qParams = mockQuery.mock.calls[0][1];
+        expect(sql).toContain('eo.type = ?');
+        expect(qParams).toEqual([2, 10, 0]);
+      });
     });
 
     describe('POST /api/events/org/count', () => {
@@ -145,7 +155,7 @@ describe('Events API', () => {
         const res = await request(app).post('/api/events/org').send(body);
         expect(res.status).toBe(201);
         expect(res.body.success).toBe(true);
-        expect(res.body.id).toBe(7);
+        expect(res.body.data.id).toBe(7);
       });
       test('400 без обязательных полей', async () => {
         const res = await request(app).post('/api/events/org').send({});
@@ -171,7 +181,24 @@ describe('Events API', () => {
         const res = await request(app).put('/api/events/org').send(body);
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
-        expect(res.body.ok).toBe(true);
+        expect(res.body.data.ok).toBe(true);
+      });
+      test('успех с пустыми строками в опциональных полях', async () => {
+        mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
+        const body = {
+          id: 1,
+          name: 'Меро',
+          form_of_holding: '',
+          dates_of_event: '',
+          day_of_the_week: '',
+          amount_of_applications: '',
+          amount_of_planning_application: '',
+          annotation: '',
+          result: ''
+        };
+        const res = await request(app).put('/api/events/org').send(body);
+        expect(res.status).toBe(200);
+        expect(res.body.data.ok).toBe(true);
       });
       test('404 при отсутствии', async () => {
         mockQuery.mockResolvedValueOnce([{ affectedRows: 0 }, []]);
@@ -209,7 +236,7 @@ describe('Events API', () => {
         mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
         const res = await request(app).delete('/api/events/org/responsible').send({ id_employee: 1, id_event: 2 });
         expect(res.status).toBe(200);
-        expect(res.body.ok).toBe(true);
+        expect(res.body.data.ok).toBe(true);
       });
       test('404 при отсутствии записи', async () => {
         mockQuery.mockResolvedValueOnce([{ affectedRows: 0 }, []]);
@@ -224,7 +251,7 @@ describe('Events API', () => {
         mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
         const res = await request(app).delete('/api/events/org/5');
         expect(res.status).toBe(200);
-        expect(res.body.ok).toBe(true);
+        expect(res.body.data.ok).toBe(true);
       });
       test('404 при отсутствии', async () => {
         mockQuery.mockResolvedValueOnce([{ affectedRows: 0 }, []]);
@@ -248,6 +275,22 @@ describe('Events API', () => {
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
         expect(Array.isArray(res.body.data)).toBe(true);
+      });
+      test('фильтр filters.id_type — id из type_of_part_event', async () => {
+        mockQuery.mockResolvedValueOnce([[], []]);
+        await request(app)
+          .post('/api/events/part/list')
+          .send({ filters: { id_type: 3 }, page: 1, limit: 10 });
+        expect(mockQuery.mock.calls[0][0]).toContain('ep.id_type = ?');
+        expect(mockQuery.mock.calls[0][1]).toEqual([3, 10, 0]);
+      });
+      test('фильтр filters.type_id — синоним id_type', async () => {
+        mockQuery.mockResolvedValueOnce([[], []]);
+        await request(app)
+          .post('/api/events/part/list')
+          .send({ filters: { type_id: 2 }, page: 1, limit: 10 });
+        expect(mockQuery.mock.calls[0][0]).toContain('ep.id_type = ?');
+        expect(mockQuery.mock.calls[0][1]).toEqual([2, 10, 0]);
       });
     });
 
@@ -347,7 +390,7 @@ describe('Events API', () => {
         const res = await request(app).post('/api/events/part').send(body);
         expect(res.status).toBe(201);
         expect(res.body.success).toBe(true);
-        expect(res.body.id).toBe(4);
+        expect(res.body.data.id).toBe(4);
       });
       test('400 без обязательных полей', async () => {
         const res = await request(app).post('/api/events/part').send({ name: 'X' });
@@ -376,7 +419,28 @@ describe('Events API', () => {
         };
         const res = await request(app).put('/api/events/part').send(body);
         expect(res.status).toBe(200);
-        expect(res.body.ok).toBe(true);
+        expect(res.body.data.ok).toBe(true);
+      });
+      test('успех с пустыми строками (form_of_holding и тексты)', async () => {
+        mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
+        const body = {
+          id: 1,
+          name: 'Олимпиада',
+          form_of_holding: '',
+          id_type: 1,
+          registration_deadline: '',
+          participants_and_works: '',
+          result: '',
+          annotation: '',
+          dates_of_event: '',
+          link: '',
+          participants_amount: '',
+          winner_amount: '',
+          runner_up_amount: ''
+        };
+        const res = await request(app).put('/api/events/part').send(body);
+        expect(res.status).toBe(200);
+        expect(res.body.data.ok).toBe(true);
       });
       test('404 при отсутствии', async () => {
         mockQuery.mockResolvedValueOnce([{ affectedRows: 0 }, []]);
@@ -392,7 +456,7 @@ describe('Events API', () => {
         mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
         const res = await request(app).put('/api/events/part/result').send({ id_event: 1, id_employee: 2, result_of_responsible: 'Готово' });
         expect(res.status).toBe(200);
-        expect(res.body.ok).toBe(true);
+        expect(res.body.data.ok).toBe(true);
       });
       test('400 без id_event или id_employee', async () => {
         const res = await request(app).put('/api/events/part/result').send({ id_event: 1 });
@@ -412,7 +476,7 @@ describe('Events API', () => {
         mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
         const res = await request(app).put('/api/events/part/mark').send({ id_event: 1, id_employee: 2, mark_of_sending_an_application: 1 });
         expect(res.status).toBe(200);
-        expect(res.body.ok).toBe(true);
+        expect(res.body.data.ok).toBe(true);
       });
       test('400 без id_event или id_employee', async () => {
         const res = await request(app).put('/api/events/part/mark').send({ id_event: 1 });
@@ -442,7 +506,7 @@ describe('Events API', () => {
         mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
         const res = await request(app).delete('/api/events/part/responsible').send({ id_employee: 1, id_event: 2 });
         expect(res.status).toBe(200);
-        expect(res.body.ok).toBe(true);
+        expect(res.body.data.ok).toBe(true);
       });
       test('404 при отсутствии', async () => {
         mockQuery.mockResolvedValueOnce([{ affectedRows: 0 }, []]);
@@ -456,7 +520,7 @@ describe('Events API', () => {
         mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
         const res = await request(app).delete('/api/events/part/5');
         expect(res.status).toBe(200);
-        expect(res.body.ok).toBe(true);
+        expect(res.body.data.ok).toBe(true);
       });
       test('404 при отсутствии', async () => {
         mockQuery.mockResolvedValueOnce([{ affectedRows: 0 }, []]);
@@ -466,6 +530,105 @@ describe('Events API', () => {
       });
       test('400 при невалидном id', async () => {
         const res = await request(app).delete('/api/events/part/0');
+        expect(res.status).toBe(400);
+      });
+    });
+
+    /* ── Ученики мероприятия участия ── */
+
+    describe('GET /api/events/part/:eventId/students', () => {
+      test('возвращает массив учеников', async () => {
+        mockQuery.mockResolvedValueOnce([[
+          { id: 1, id_student: 42, id_status: 1, surname: 'Иванов', name: 'Пётр', patronymic: null, status_name: 'Участник' }
+        ], []]);
+        const res = await request(app).get('/api/events/part/10/students');
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(Array.isArray(res.body.data)).toBe(true);
+        expect(res.body.data[0]).toMatchObject({ id_student: 42, status_name: 'Участник' });
+      });
+      test('пустой список', async () => {
+        mockQuery.mockResolvedValueOnce([[], []]);
+        const res = await request(app).get('/api/events/part/10/students');
+        expect(res.status).toBe(200);
+        expect(res.body.data).toEqual([]);
+      });
+      test('400 при невалидном eventId', async () => {
+        const res = await request(app).get('/api/events/part/0/students');
+        expect(res.status).toBe(400);
+      });
+    });
+
+    describe('POST /api/events/part/:eventId/students', () => {
+      test('создаёт привязку', async () => {
+        mockQuery.mockResolvedValueOnce([{ insertId: 7 }, []]);
+        const res = await request(app)
+          .post('/api/events/part/10/students')
+          .send({ id_student: 42, id_status: 1 });
+        expect(res.status).toBe(201);
+        expect(res.body.data.id).toBe(7);
+      });
+      test('400 без id_student', async () => {
+        const res = await request(app)
+          .post('/api/events/part/10/students')
+          .send({ id_status: 1 });
+        expect(res.status).toBe(400);
+      });
+      test('400 без id_status', async () => {
+        const res = await request(app)
+          .post('/api/events/part/10/students')
+          .send({ id_student: 42 });
+        expect(res.status).toBe(400);
+      });
+      test('409 при дубликате', async () => {
+        const dupErr = new Error('Duplicate');
+        dupErr.code = 'ER_DUP_ENTRY';
+        mockQuery.mockRejectedValueOnce(dupErr);
+        const res = await request(app)
+          .post('/api/events/part/10/students')
+          .send({ id_student: 42, id_status: 1 });
+        expect(res.status).toBe(409);
+      });
+    });
+
+    describe('PUT /api/events/part/students/:id', () => {
+      test('обновляет статус', async () => {
+        mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
+        const res = await request(app)
+          .put('/api/events/part/students/1')
+          .send({ id_status: 2 });
+        expect(res.status).toBe(200);
+        expect(res.body.data.ok).toBe(true);
+      });
+      test('404 при отсутствии записи', async () => {
+        mockQuery.mockResolvedValueOnce([{ affectedRows: 0 }, []]);
+        const res = await request(app)
+          .put('/api/events/part/students/999')
+          .send({ id_status: 2 });
+        expect(res.status).toBe(404);
+      });
+      test('400 без id_status', async () => {
+        const res = await request(app)
+          .put('/api/events/part/students/1')
+          .send({});
+        expect(res.status).toBe(400);
+      });
+    });
+
+    describe('DELETE /api/events/part/students/:id', () => {
+      test('удаляет привязку', async () => {
+        mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
+        const res = await request(app).delete('/api/events/part/students/1');
+        expect(res.status).toBe(200);
+        expect(res.body.data.ok).toBe(true);
+      });
+      test('404 при отсутствии записи', async () => {
+        mockQuery.mockResolvedValueOnce([{ affectedRows: 0 }, []]);
+        const res = await request(app).delete('/api/events/part/students/999');
+        expect(res.status).toBe(404);
+      });
+      test('400 при невалидном id', async () => {
+        const res = await request(app).delete('/api/events/part/students/0');
         expect(res.status).toBe(400);
       });
     });

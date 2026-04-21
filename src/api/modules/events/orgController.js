@@ -1,67 +1,20 @@
 const { withConnection } = require('../../helpers/db');
-const { parsePositiveId, requireBodyKeys } = require('../../helpers/validation');
+const { parsePositiveId, requireBodyKeys, textField, intOrZero, dateOrNull } = require('../../helpers/validation');
+const { sendSuccess, sendError } = require('../../helpers/http');
+const { parseListBody, buildOrgWhere } = require('./helpers');
 
 const ALLOWED_SORT = ['id', 'name', 'dates_of_event', 'day_of_the_week'];
 
-function buildWhere(filters) {
-  const where = [];
-  const params = [];
-  if (filters?.period && filters.period !== 'all') {
-    switch (filters.period) {
-      case 'this_month':
-        where.push(' eo.dates_of_event >= DATE_FORMAT(NOW(), "%Y-%m-01") AND eo.dates_of_event < DATE_ADD(DATE_FORMAT(NOW(), "%Y-%m-01"), INTERVAL 1 MONTH) ');
-        break;
-      case 'this_week':
-        where.push(' YEARWEEK(eo.dates_of_event) = YEARWEEK(NOW()) ');
-        break;
-      case 'next_week':
-        where.push(' YEARWEEK(eo.dates_of_event) = YEARWEEK(NOW())+1 ');
-        break;
-      case 'three_months':
-        where.push(' eo.dates_of_event >= CURDATE() AND eo.dates_of_event <= DATE_ADD(CURDATE(), INTERVAL 3 MONTH) ');
-        break;
-      default:
-        break;
-    }
-  }
-  if (filters?.search && String(filters.search).trim()) {
-    where.push(' eo.name LIKE ? ');
-    params.push(`%${String(filters.search).trim()}%`);
-  }
-  if (filters?.employee_id) {
-    where.push(' EXISTS (SELECT 1 FROM responsible_for_org_events ro WHERE ro.id_event = eo.id AND ro.id_employee = ?) ');
-    params.push(filters.employee_id);
-  }
-  return { where: where.length ? ` WHERE ${where.join(' AND ')} ` : '', params };
-}
-
-function parseListBody(body) {
-  const filters = body?.filters || {};
-  const sort = body?.sort && body.sort[0] ? body.sort[0] : {};
-  const page = Math.max(1, parseInt(body?.page, 10) || 1);
-  const limit = Math.min(100, Math.max(1, parseInt(body?.limit, 10) || 10));
-  const offset = (page - 1) * limit;
-  return { filters, sort, page, limit, offset };
-}
-
-function sendSuccess(res, data, status = 200) {
-  res.status(status).json({ success: true, ...data });
-}
-
-function sendError(res, status, error) {
-  res.status(status).json({ success: false, error });
-}
-
 exports.list = async (req, res) => {
   const { filters, sort, page, limit, offset } = parseListBody(req.body);
-  const { where, params } = buildWhere(filters);
+  const { where, params } = buildOrgWhere(filters);
   const sortField = ALLOWED_SORT.includes(sort?.field) ? sort.field : 'id';
   const dir = sort?.order === 'asc' ? 'ASC' : 'DESC';
   const orderBy = ` ORDER BY eo.${sortField} ${dir} `;
-  const sql = `SELECT eo.id, eo.name, DATE_FORMAT(eo.dates_of_event, '%Y-%m-%d') AS dates_of_event, eo.day_of_the_week FROM event_plan_organization eo ${where} ${orderBy} LIMIT ? OFFSET ?`;
+  const sql = `SELECT eo.id, eo.name, DATE_FORMAT(eo.dates_of_event, '%Y-%m-%d') AS dates_of_event, eo.day_of_the_week, eo.type FROM event_plan_organization eo ${where} ${orderBy} LIMIT ? OFFSET ?`;
   try {
     const [rows] = await withConnection((conn) => conn.query(sql, [...params, limit, offset]));
-    sendSuccess(res, { data: rows, page, limit });
+    res.json({ success: true, data: rows, page, limit });
   } catch (err) {
     console.error('org list:', err);
     sendError(res, 500, 'Не удалось получить список мероприятий.');
@@ -71,11 +24,11 @@ exports.list = async (req, res) => {
 /** POST /count — только filters в теле */
 exports.count = async (req, res) => {
   const filters = req.body?.filters || {};
-  const { where, params } = buildWhere(filters);
+  const { where, params } = buildOrgWhere(filters);
   const sql = `SELECT COUNT(*) AS total FROM event_plan_organization eo ${where}`;
   try {
     const [rows] = await withConnection((conn) => conn.query(sql, params));
-    sendSuccess(res, { total: rows[0].total });
+    res.json({ success: true, total: rows[0].total });
   } catch (err) {
     console.error('org count:', err);
     sendError(res, 500, 'Не удалось получить количество.');
@@ -86,7 +39,7 @@ exports.count = async (req, res) => {
 exports.respTable = async (req, res) => {
   try {
     const [rows] = await withConnection((conn) => conn.query('SELECT * FROM responsible_for_org_events'));
-    sendSuccess(res, { data: rows });
+    sendSuccess(res, rows);
   } catch (err) {
     console.error('org respTable:', err);
     sendError(res, 500, 'Не удалось получить таблицу.');
@@ -101,7 +54,7 @@ exports.fullInf = async (req, res) => {
   try {
     const [rows] = await withConnection((conn) => conn.query(sql, [id]));
     if (rows.length === 0) return sendError(res, 404, 'Мероприятие не найдено.');
-    sendSuccess(res, { data: rows[0] });
+    sendSuccess(res, rows[0]);
   } catch (err) {
     console.error('org fullInf:', err);
     sendError(res, 500, 'Не удалось получить данные.');
@@ -115,7 +68,7 @@ exports.responsible = async (req, res) => {
   const sql = `SELECT ro.id_event, emp.id_employees, emp.first_name, emp.second_name FROM responsible_for_org_events ro INNER JOIN employees emp ON emp.id_employees = ro.id_employee WHERE ro.id_event = ?`;
   try {
     const [rows] = await withConnection((conn) => conn.query(sql, [id]));
-    sendSuccess(res, { data: rows });
+    sendSuccess(res, rows);
   } catch (err) {
     console.error('org responsible:', err);
     sendError(res, 500, 'Не удалось получить ответственных.');
@@ -129,7 +82,7 @@ exports.notificationsToday = async (req, res) => {
   const sql = `SELECT eo.id, eo.name, DATE_FORMAT(eo.dates_of_event, '%Y-%m-%d') AS dates_of_event, eo.day_of_the_week FROM event_plan_organization eo INNER JOIN responsible_for_org_events resp ON resp.id_event = eo.id AND resp.id_employee = ? WHERE eo.dates_of_event = CURDATE() ORDER BY eo.id DESC`;
   try {
     const [rows] = await withConnection((conn) => conn.query(sql, [id]));
-    sendSuccess(res, { data: rows });
+    sendSuccess(res, rows);
   } catch (err) {
     console.error('org notificationsToday:', err);
     sendError(res, 500, 'Не удалось получить уведомления.');
@@ -143,7 +96,7 @@ exports.notificationsTomorrow = async (req, res) => {
   const sql = `SELECT eo.id, eo.name, DATE_FORMAT(eo.dates_of_event, '%Y-%m-%d') AS dates_of_event, eo.day_of_the_week FROM event_plan_organization eo INNER JOIN responsible_for_org_events resp ON resp.id_event = eo.id AND resp.id_employee = ? WHERE eo.dates_of_event = DATE_ADD(CURRENT_DATE, INTERVAL 1 DAY) ORDER BY eo.id DESC`;
   try {
     const [rows] = await withConnection((conn) => conn.query(sql, [id]));
-    sendSuccess(res, { data: rows });
+    sendSuccess(res, rows);
   } catch (err) {
     console.error('org notificationsTomorrow:', err);
     sendError(res, 500, 'Не удалось получить уведомления.');
@@ -158,7 +111,7 @@ exports.notifications = async (req, res) => {
   const sql = `SELECT eo.id, eo.name, DATE_FORMAT(eo.dates_of_event, '%Y-%m-%d') AS dates_of_event, eo.day_of_the_week FROM event_plan_organization eo INNER JOIN responsible_for_org_events resp ON resp.id_event = eo.id AND resp.id_employee = ? WHERE eo.dates_of_event = ? ORDER BY eo.id DESC`;
   try {
     const [rows] = await withConnection((conn) => conn.query(sql, [empId, date]));
-    sendSuccess(res, { data: rows });
+    sendSuccess(res, rows);
   } catch (err) {
     console.error('org notifications:', err);
     sendError(res, 500, 'Не удалось получить уведомления.');
@@ -168,12 +121,24 @@ exports.notifications = async (req, res) => {
 /** POST / — создание мероприятия */
 exports.add = async (req, res) => {
   const keys = ['name', 'form_of_holding', 'dates_of_event', 'day_of_the_week', 'amount_of_applications', 'amount_of_planning_application', 'annotation', 'result'];
-  const check = requireBodyKeys(req.body, keys);
+  const check = requireBodyKeys(req.body, keys, { allowEmpty: true });
   if (!check.valid) return sendError(res, 400, check.message);
   const b = req.body;
+  if (!String(b.name || '').trim()) return sendError(res, 400, 'Укажите название мероприятия.');
   const sql = `INSERT INTO event_plan_organization (name, form_of_holding, dates_of_event, day_of_the_week, amount_of_applications, amount_of_planning_application, annotation, result, type, link) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
   try {
-    const [r] = await withConnection((conn) => conn.query(sql, [b.name, b.form_of_holding || null, b.dates_of_event || null, b.day_of_the_week || null, b.amount_of_applications ?? null, b.amount_of_planning_application ?? null, b.annotation || null, b.result || null, b.type ?? null, b.link || null]));
+    const [r] = await withConnection((conn) => conn.query(sql, [
+      b.name,
+      textField(b.form_of_holding),
+      dateOrNull(b.dates_of_event),
+      textField(b.day_of_the_week),
+      intOrZero(b.amount_of_applications),
+      intOrZero(b.amount_of_planning_application),
+      textField(b.annotation),
+      textField(b.result),
+      intOrZero(b.type),
+      textField(b.link),
+    ]));
     sendSuccess(res, { id: r.insertId }, 201);
   } catch (err) {
     console.error('org add:', err);
@@ -184,14 +149,27 @@ exports.add = async (req, res) => {
 /** PUT / — обновление мероприятия */
 exports.update = async (req, res) => {
   const keys = ['id', 'name', 'form_of_holding', 'dates_of_event', 'day_of_the_week', 'amount_of_applications', 'amount_of_planning_application', 'annotation', 'result'];
-  const check = requireBodyKeys(req.body, keys);
+  const check = requireBodyKeys(req.body, keys, { allowEmpty: true });
   if (!check.valid) return sendError(res, 400, check.message);
   const id = parsePositiveId(req.body.id);
   if (id == null) return sendError(res, 400, 'Некорректный id.');
   const b = req.body;
+  if (!String(b.name || '').trim()) return sendError(res, 400, 'Укажите название мероприятия.');
   const sql = `UPDATE event_plan_organization SET name = ?, form_of_holding = ?, dates_of_event = ?, day_of_the_week = ?, amount_of_applications = ?, amount_of_planning_application = ?, annotation = ?, result = ?, type = ?, link = ? WHERE id = ?`;
   try {
-    const [r] = await withConnection((conn) => conn.query(sql, [b.name, b.form_of_holding || null, b.dates_of_event || null, b.day_of_the_week || null, b.amount_of_applications ?? null, b.amount_of_planning_application ?? null, b.annotation || null, b.result || null, b.type ?? null, b.link || null, id]));
+    const [r] = await withConnection((conn) => conn.query(sql, [
+      b.name,
+      textField(b.form_of_holding),
+      dateOrNull(b.dates_of_event),
+      textField(b.day_of_the_week),
+      intOrZero(b.amount_of_applications),
+      intOrZero(b.amount_of_planning_application),
+      textField(b.annotation),
+      textField(b.result),
+      intOrZero(b.type),
+      textField(b.link),
+      id,
+    ]));
     if (r.affectedRows === 0) return sendError(res, 404, 'Мероприятие не найдено.');
     sendSuccess(res, { ok: true });
   } catch (err) {

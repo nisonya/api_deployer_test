@@ -2,6 +2,7 @@ const path = require('path');
 const { app, BrowserWindow } = require('electron');
 const { createMainWindow, createSetupWindow } = require('./src/main/windows');
 const { log } = require('./src/main/mainLog');
+const { tryAutoStartApi } = require('./src/main/autoStartApi');
 
 function initEnv() {
   process.env.API_DEPLOYER_CONFIG_DIR = path.join(app.getPath('userData'), 'config');
@@ -32,6 +33,8 @@ app.whenReady().then(async () => {
     require('./src/main/ipcHandlers').registerHandlers(mainWindow);
     mainWindow = createMainWindow();
     log('Main window created');
+
+    await tryAutoStartApi();
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) mainWindow = createMainWindow();

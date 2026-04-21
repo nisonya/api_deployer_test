@@ -1,5 +1,6 @@
 const { BrowserWindow, app, screen } = require('electron');
 const path = require('path');
+const { pathToFileURL } = require('url');
 const { isConfigured } = require('../common/envLoader');
 const { log: mainLog } = require('./mainLog');
 
@@ -55,7 +56,10 @@ function createMainWindow() {
   });
   mainWindow.center();
   attachLoadErrorLog(mainWindow, 'main');
-  mainWindow.loadFile(htmlPath).catch((err) => mainLog('main loadFile error: ' + (err.stack || err), true));
+  // loadURL + pathToFileURL: на Windows путь со слешами \ и пробелами в каталоге иначе даёт ERR_FAILED (-2) при loadFile
+  mainWindow
+    .loadURL(pathToFileURL(htmlPath).href)
+    .catch((err) => mainLog('main loadURL error: ' + (err.stack || err), true));
   mainWindow.removeMenu();
   return mainWindow;
 }
@@ -77,7 +81,9 @@ function createSetupWindow(parentWindow = null) {
   });
   if (!parentWindow) win.center();
   attachLoadErrorLog(win, 'setup');
-  win.loadFile(htmlPath).catch((err) => mainLog('setup loadFile error: ' + (err.stack || err), true));
+  win
+    .loadURL(pathToFileURL(htmlPath).href)
+    .catch((err) => mainLog('setup loadURL error: ' + (err.stack || err), true));
   win.on('closed', () => {
     if (!isConfigured()) require('electron').app.quit();
   });
@@ -99,7 +105,9 @@ function createBackupWindow(parentWindow = null) {
   });
   if (!parentWindow) win.center();
   attachLoadErrorLog(win, 'backup');
-  win.loadFile(htmlPath).catch((err) => mainLog('backup loadFile error: ' + (err.stack || err), true));
+  win
+    .loadURL(pathToFileURL(htmlPath).href)
+    .catch((err) => mainLog('backup loadURL error: ' + (err.stack || err), true));
   win.on('closed', () => {});
   return win;
 }

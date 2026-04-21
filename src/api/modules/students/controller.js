@@ -1,5 +1,6 @@
 const { withConnection } = require('../../helpers/db');
 const { parsePositiveId, requireBodyKeys } = require('../../helpers/validation');
+const { sendSuccess, sendError } = require('../../helpers/http');
 
 async function fetchStudentsByLetter(conn, letter) {
   const baseSelect = `SELECT s.idStudent AS id, s.surnameStudent AS surname, s.nameStudent AS name, s.patronymicStudent AS patronymic,
@@ -112,14 +113,6 @@ async function updateStudentToGroupRow(conn, studentId, oldGroupId, newGroupId) 
 async function deleteStudentFromGroupRow(conn, studentId, groupId) {
   const [r] = await conn.query('DELETE FROM students_groups WHERE idStudent = ? AND idGroup = ?', [studentId, groupId]);
   return r.affectedRows;
-}
-
-function sendSuccess(res, data, status = 200) {
-  res.status(status).json({ success: true, data });
-}
-
-function sendError(res, status, error) {
-  res.status(status).json({ success: false, error });
 }
 
 exports.searchByLetter = async (req, res) => {

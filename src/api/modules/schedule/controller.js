@@ -1,5 +1,6 @@
 const { withConnection } = require('../../helpers/db');
 const { parsePositiveId } = require('../../helpers/validation');
+const { sendSuccess, sendError } = require('../../helpers/http');
 
 async function fetchSchedule(conn) {
   const [rows] = await conn.query(`
@@ -84,7 +85,7 @@ async function fetchScheduleByDate(conn, date, roomId) {
 
 async function fetchTeachers(conn) {
   const [rows] = await conn.query(
-    `SELECT id_employees AS id, CONCAT(second_name, ' ', LEFT(first_name, 1), '.', LEFT(patronymic, 1)) AS name FROM employees WHERE position = 2`
+    `SELECT id_employees AS id, CONCAT(second_name, ' ', LEFT(first_name, 1), '.', LEFT(patronymic, 1)) AS name FROM employees WHERE \`position\` = 2`
   );
   return rows;
 }
@@ -119,14 +120,6 @@ async function deleteScheduleRow(conn, id) {
   await conn.query('DELETE FROM employees_schedule WHERE idSchedule = ?', [id]);
   const [r] = await conn.query('DELETE FROM `schedule` WHERE idlesson = ?', [id]);
   return r.affectedRows;
-}
-
-function sendSuccess(res, data, status = 200) {
-  res.status(status).json({ success: true, data });
-}
-
-function sendError(res, status, error) {
-  res.status(status).json({ success: false, error });
 }
 
 exports.getSchedule = async (req, res) => {

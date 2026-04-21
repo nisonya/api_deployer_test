@@ -1,5 +1,6 @@
 const { startApi, stopApi, getAddresses } = require('../api/app');
-const { getDbConfig, setDbConfig, updateApiPort } = require('../common/envLoader');
+const { getDbConfig, setDbConfig, updateApiPort, validateConfigCompleteForServer } = require('../common/envLoader');
+const { markSetupDone } = require('./setupMarker');
 const { getPool } = require('../db/connection');
 const fs = require('fs').promises;
 const path = require('path');
@@ -40,6 +41,11 @@ async function exportSeed(filePath, onProgress) {
   }
 }
 
+/** Нормализует экранирование апострофа в SQL для MySQL: \' → '' */
+function normalizeInsertQuotes(sql) {
+  return sql.replace(/\\'/g, "''");
+}
+
 /** Импорт БД из SQL-файла (только INSERT). Без Electron — путь передаётся явно. onProgress(0..100) — опционально. */
 async function importSeed(filePath, onProgress) {
   if (!filePath) return { success: false, message: 'Не указан путь к файлу' };
@@ -62,7 +68,8 @@ async function importSeed(filePath, onProgress) {
     const total = insertLines.length;
     for (const query of insertLines) {
       try {
-        await conn.query(query);
+        const normalized = normalizeInsertQuotes(query);
+        await conn.query(normalized);
         processed++;
         if (onProgress) onProgress(Math.round((processed / total) * 100));
         await new Promise(resolve => setImmediate(resolve));
@@ -86,20 +93,43 @@ function registerHandlers(mainWindow) {
   const { createSetupWindow, createBackupWindow } = require('./windows');
 
   function safeDbConfig(config) {
-    return config ? { host: config.host, port: config.port, user: config.user, database: config.database, apiPort: config.apiPort } : null;
+    if (!config) return null;
+    return {
+      host: config.host,
+      port: config.port,
+      user: config.user,
+      database: config.database,
+      apiPort: config.apiPort,
+      documentsRootOrg: config.documentsRootOrg,
+      documentsRootPart: config.documentsRootPart
+    };
   }
 
   ipcMain.handle('get-api-status', () => ({ running: !!getApiServer() }));
   ipcMain.handle('get-api-addresses', () => getAddresses());
 
   ipcMain.handle('get-db-config', async () => safeDbConfig(await Promise.resolve(getDbConfig())));
+  ipcMain.handle('get-config-readiness', async () => {
+    const v = validateConfigCompleteForServer();
+    return { ready: v.ok, message: v.ok ? '' : v.message };
+  });
+  ipcMain.handle('select-directory', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openDirectory', 'createDirectory']
+    });
+    if (canceled || !filePaths?.[0]) return { canceled: true };
+    return { canceled: false, path: filePaths[0] };
+  });
   ipcMain.handle('start-api', async () => {
     if (getApiServer()) return { success: false, message: 'API is running' };
+    const check = validateConfigCompleteForServer();
+    if (!check.ok) return { success: false, message: check.message };
     try {
       const config = await Promise.resolve(getDbConfig());
       const apiPort = config?.apiPort ?? 3000;
       const server = await startApi(apiPort);
       setApiServer(server);
+      markSetupDone();
       return { success: true, message: 'API is running' };
     } catch (err) {
       return { success: false, message: err.message };
@@ -136,7 +166,15 @@ function registerHandlers(mainWindow) {
   });
 
   ipcMain.handle('save-db-config', async (_event, config) => {
-    await setDbConfig(config);
+    const existing = getDbConfig() || {};
+    const merged = {
+      ...config,
+      password: (typeof config.password === 'string' && config.password !== '')
+        ? config.password
+        : existing.password
+    };
+    await setDbConfig(merged);
+    markSetupDone();
     return { success: true };
   });
   ipcMain.handle('update-api-port', async (_event, apiPort) => {

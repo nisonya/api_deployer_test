@@ -3,6 +3,23 @@ const addressEl = document.getElementById('address');
 const switchEl = document.getElementById('serverSwitch');
 const settingsBtn = document.getElementById('settingsBtn');
 const backUpBtn = document.getElementById('backupHeader');
+
+async function refreshConfigReadiness() {
+  try {
+    const r = await window.electronAPI.getConfigReadiness();
+    if (r.ready) {
+      switchEl.disabled = false;
+      switchEl.title = '';
+    } else {
+      switchEl.disabled = true;
+      switchEl.title = r.message || 'Заполните настройки БД и API (включая каталоги документов).';
+    }
+  } catch {
+    switchEl.disabled = false;
+    switchEl.title = '';
+  }
+}
+
 async function updateStatus() {
   const res = await window.electronAPI.getApiStatus();
   const addrs = await window.electronAPI.getApiAddresses();
@@ -11,11 +28,14 @@ async function updateStatus() {
     addressEl.textContent = `${addrs.protocol}://0.0.0.0:${addrs.port}`;
     addressEl.title = `Обращайтесь по адресу вашего сервера и порту ${addrs.port}`;
     switchEl.checked = true;
+    switchEl.disabled = false;
+    switchEl.title = '';
   } else {
     statusEl.textContent = 'Сервер остановлен';
     addressEl.textContent = '';
     addressEl.title = '';
     switchEl.checked = false;
+    await refreshConfigReadiness();
   }
 }
 
@@ -33,7 +53,7 @@ switchEl.addEventListener('change', async () => {
   }
 });
 backUpBtn.addEventListener('click', () => {
-  window.electronAPI.openBackupModal(); 
+  window.electronAPI.openBackupModal();
 });
 
 settingsBtn.addEventListener('click', () => {

@@ -1,7 +1,10 @@
 const request = require('supertest');
 
 jest.mock('../../../src/db/connection');
-jest.mock('../../../src/api/middleware/auth', () => (req, res, next) => next());
+jest.mock('../../../src/api/middleware/auth', () => (req, res, next) => {
+  req.user = { id: 1, accessLevel: 1 };
+  next();
+});
 
 const connection = require('../../../src/db/connection');
 const app = require('../../setup');
@@ -132,6 +135,30 @@ describe('Group API', () => {
       expect(res.status).toBe(200);
       expect(res.body.data[0]).toHaveProperty('id');
       expect(res.body.data[0]).toHaveProperty('name');
+    });
+  });
+
+  describe('CRUD /list', () => {
+    test('POST /list — добавляет группу', async () => {
+      mockQuery.mockResolvedValueOnce([{ insertId: 99 }, []]);
+      const res = await request(app).post('/api/groups/list').send({ name: 'ПР-99' });
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.id).toBe(99);
+    });
+
+    test('PUT /list/:id — обновляет группу', async () => {
+      mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
+      const res = await request(app).put('/api/groups/list/7').send({ name: 'ПР-07A' });
+      expect(res.status).toBe(200);
+      expect(res.body.data.ok).toBe(true);
+    });
+
+    test('DELETE /list/:id — удаляет группу', async () => {
+      mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }, []]);
+      const res = await request(app).delete('/api/groups/list/7');
+      expect(res.status).toBe(200);
+      expect(res.body.data.ok).toBe(true);
     });
   });
 

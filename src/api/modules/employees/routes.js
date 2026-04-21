@@ -4,6 +4,7 @@ const controller = require('./controller');
 
 router.get('/', controller.getAllEmployees);
 router.get('/all', controller.getAllEmployeesLegacy);
+router.get('/with-inactive', controller.getAllWithInactive);
 router.get('/schedule', controller.getSchedule);
 router.get('/short-list', controller.getShortList);
 router.get('/sizes', controller.getSizes);
@@ -18,5 +19,8 @@ router.post('/add', controller.addEmployee);
 router.put('/kpi', controller.setKpi);
 router.put('/contact', controller.updateContact);
 router.put('/size', controller.updateSize);
+router.put('/:id', controller.updateEmployee);
+
+router.delete('/:id', controller.deleteEmployee);
 
 module.exports = router;

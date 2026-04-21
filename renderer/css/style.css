@@ -428,3 +428,29 @@ form {
   align-items: center;          /* центрирует все элементы внутри формы */
   gap: 12px;                    /* расстояние между группами */
 }
+
+.input-with-btn {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.input-with-btn input[type="text"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.input-with-btn .button-secondary {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 10px 14px;
+}
+
+.button-secondary {
+  background: #666;
+}
+
+.button-secondary:hover {
+  background: #555;
+}

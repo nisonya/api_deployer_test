@@ -1,9 +1,10 @@
 const { withConnection } = require('../../helpers/db');
 const { parsePositiveId } = require('../../helpers/validation');
+const { sendSuccess, sendError } = require('../../helpers/http');
 
 async function fetchRentByEvent(conn, eventId) {
   const [rows] = await conn.query(
-    `SELECT r.id AS id_rent, r.id_event AS id_event, r.start_time, r.end_time,
+    `SELECT r.id AS id_rent, r.id_event AS id_event, r.id_room AS id_room, r.start_time, r.end_time,
       DATE_FORMAT(r.date, '%Y-%m-%d') AS date, CONCAT(ro.name, ' ', ro.number) AS name
      FROM rent r
      INNER JOIN room ro ON r.id_room = ro.id
@@ -15,7 +16,7 @@ async function fetchRentByEvent(conn, eventId) {
 
 async function fetchRentById(conn, id) {
   const [rows] = await conn.query(
-    `SELECT r.id AS id_rent, r.id_event AS id_event, r.start_time, r.end_time,
+    `SELECT r.id AS id_rent, r.id_event AS id_event, r.id_room AS id_room, r.start_time, r.end_time,
       DATE_FORMAT(r.date, '%Y-%m-%d') AS date, CONCAT(ro.name, ' ', ro.number) AS name
      FROM rent r
      INNER JOIN room ro ON r.id_room = ro.id
@@ -57,14 +58,6 @@ async function updateRentRow(conn, id, eventId, roomId, date, startTime, endTime
 async function deleteRentRow(conn, id) {
   const [r] = await conn.query('DELETE FROM rent WHERE id = ?', [id]);
   return r.affectedRows;
-}
-
-function sendSuccess(res, data, status = 200) {
-  res.status(status).json({ success: true, data });
-}
-
-function sendError(res, status, error) {
-  res.status(status).json({ success: false, error });
 }
 
 exports.getByEvent = async (req, res) => {

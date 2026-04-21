@@ -13,6 +13,7 @@ const saveBtn = document.getElementById('saveBtn');
 const message = document.getElementById('message');
 const apiForm = document.getElementById('apiForm');
 const saveApiBtn = document.getElementById('saveApiBtn');
+const apiMessage = document.getElementById('apiMessage');
 const restartBanner = document.getElementById('restart-banner');
 const bannerText = document.getElementById('banner-text');
 const restartBtn = document.getElementById('restartBtn');
@@ -37,6 +38,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('password').value = config.password || '';
     document.getElementById('database').value = config.database || 'kvant';
     document.getElementById('apiPort').value = config.apiPort || 3000;
+    document.getElementById('documentsRootOrg').value = config.documentsRootOrg || '';
+    document.getElementById('documentsRootPart').value = config.documentsRootPart || '';
   }
 });
 
@@ -44,11 +47,13 @@ async function getDbFormData() {
   const apiPortNum = parseInt(document.getElementById('apiPort').value, 10);
   return {
     host: document.getElementById('host').value.trim(),
-    port: parseInt(document.getElementById('port').value),
+    port: parseInt(document.getElementById('port').value, 10),
     user: document.getElementById('user').value.trim(),
     password: document.getElementById('password').value,
     database: document.getElementById('database').value.trim(),
-    apiPort: (Number.isInteger(apiPortNum) && apiPortNum >= 0 && apiPortNum <= 65535) ? apiPortNum : 3000
+    apiPort: (Number.isInteger(apiPortNum) && apiPortNum >= 1 && apiPortNum <= 65535) ? apiPortNum : 3000,
+    documentsRootOrg: document.getElementById('documentsRootOrg').value.trim(),
+    documentsRootPart: document.getElementById('documentsRootPart').value.trim()
   };
 }
 
@@ -58,6 +63,29 @@ async function validateDbForm(config) {
   if (!config.user) return 'Укажите пользователя';
   return null;
 }
+
+function validateApiForm(config) {
+  if (!Number.isInteger(config.apiPort) || config.apiPort < 1 || config.apiPort > 65535) {
+    return 'Порт API должен быть от 1 до 65535';
+  }
+  if (!config.documentsRootOrg) return 'Укажите каталог документов мероприятий организации';
+  if (!config.documentsRootPart) return 'Укажите каталог документов мероприятий участия';
+  return null;
+}
+
+document.getElementById('browseDocumentsRootOrg').addEventListener('click', async () => {
+  const res = await window.electronAPI.selectDirectory();
+  if (!res.canceled && res.path) {
+    document.getElementById('documentsRootOrg').value = res.path;
+  }
+});
+
+document.getElementById('browseDocumentsRootPart').addEventListener('click', async () => {
+  const res = await window.electronAPI.selectDirectory();
+  if (!res.canceled && res.path) {
+    document.getElementById('documentsRootPart').value = res.path;
+  }
+});
 
 testBtn.addEventListener('click', async () => {
   message.textContent = 'Проверка...';
@@ -95,28 +123,27 @@ dbForm.addEventListener('submit', async (e) => {
   }
 
   await window.electronAPI.saveDBConfig(config);
-  message.textContent = 'Настройки БД сохранены. Для применения перезагрузите приложение.';
+  message.textContent = 'Настройки сохранены. Для применения перезагрузите приложение.';
   message.style.color = 'var(--accent-green)';
   activateBanner();
 });
 
 apiForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const apiPortInput = document.getElementById('apiPort');
-  const apiPort = parseInt(apiPortInput.value);
-
-  if (isNaN(apiPort) || apiPort < 0 || apiPort > 65535) {
-    message.textContent = 'Порт API должен быть от 0 до 65535';
-    message.style.color = 'red';
+  const config = await getDbFormData();
+  const apiErr = validateApiForm(config);
+  if (apiErr) {
+    apiMessage.textContent = apiErr;
+    apiMessage.style.color = 'red';
     return;
   }
   try {
-    await window.electronAPI.updateApiPort(apiPort);
-    message.textContent = 'Порт API сохранён. Для применения перезагрузите приложение.';
-    message.style.color = 'var(--accent-green)';
+    await window.electronAPI.saveDBConfig(config);
+    apiMessage.textContent = 'Настройки API сохранены. Для применения перезагрузите приложение.';
+    apiMessage.style.color = 'var(--accent-green)';
     activateBanner();
   } catch (err) {
-    message.textContent = `Ошибка: ${err.message}`;
-    message.style.color = 'red';
+    apiMessage.textContent = `Ошибка: ${err.message}`;
+    apiMessage.style.color = 'red';
   }
 });

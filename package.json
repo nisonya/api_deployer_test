@@ -2,6 +2,7 @@
   "name": "kvant-server",
   "version": "1.0.0",
   "description": "app for api and db deploy",
+  "homepage": "https://github.com/kvant-server/kvant-server",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -11,9 +12,11 @@
     "export-db": "node scripts/export-db.js",
     "import-db": "node scripts/import-db.js",
     "build:win": "electron-builder --win",
-    "build:linux": "node scripts/ensure-linux-icon.js && electron-builder --linux",
+    "build:linux": "node scripts/ensure-linux-icon.js && npx electron-builder --linux tar.gz --x64",
+    "build:appimage": "node scripts/ensure-linux-icon.js && npx electron-builder --linux AppImage --x64",
+    "build:dist": "node scripts/ensure-linux-icon.js && npx electron-builder --win nsis zip --linux tar.gz --x64",
     "build:linux-headless": "node scripts/build-headless.js",
-    "build:all": "electron-builder --win --linux",
+    "build:all": "node scripts/ensure-linux-icon.js && npx electron-builder --win nsis zip --linux tar.gz",
     "build": "electron-builder",
     "test": "jest",
     "test:sync": "jest --testPathIgnorePatterns=\"tests/async\"",
@@ -36,14 +39,7 @@
       "!*.pem"
     ],
     "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
       "icon": "build/icon.ico"
     },
     "nsis": {
@@ -52,19 +48,23 @@
     },
     "linux": {
       "icon": "build/icon.png",
-      "target": [
-        "AppImage"
-      ]
+      "category": "Utility",
+      "target": [{ "target": "tar.gz", "arch": ["x64"] }]
     }
   },
   "repository": {
     "type": "git",
-    "url": "e"
+    "url": "https://github.com/kvant-server/kvant-server.git"
   },
   "keywords": [
-    "e"
+    "kvant",
+    "electron",
+    "api"
   ],
-  "author": "e",
+  "author": {
+    "name": "Kvant Server",
+    "email": "noreply@kvant.local"
+  },
   "license": "ISC",
   "devDependencies": {
     "@playwright/test": "^1.57.0",
@@ -88,6 +88,7 @@
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^1.4.5-lts.1",
     "mysql2": "^3.16.0",
     "request": "^2.88.2",
     "selfsigned": "^2.4.1"

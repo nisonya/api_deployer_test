@@ -1,5 +1,7 @@
 const { withConnection } = require('../../helpers/db');
-const { parsePositiveId, requireBodyKeys } = require('../../helpers/validation');
+const { parsePositiveId, requireBodyKeys, optionalPositiveId, dateOrNull } = require('../../helpers/validation');
+const { sendSuccess, sendError } = require('../../helpers/http');
+const bcrypt = require('bcryptjs');
 
 // Функции ниже принимают conn — это подключение к БД. Его не передаём мы:
 // мы передаём саму функцию в withConnection, а withConnection внутри вызывает её как fn(conn).
@@ -9,8 +11,18 @@ async function fetchAllEmployees(conn) {
   const [rows] = await conn.query(
     `SELECT e.id_employees, e.first_name, e.second_name, e.patronymic, e.position, p.name AS position_name
      FROM employees e
-     LEFT JOIN position p ON e.position = p.id
+     LEFT JOIN \`position\` p ON e.position = p.id
      WHERE e.is_active = 1`
+  );
+  return rows;
+}
+
+async function fetchAllEmployeesIncludingInactive(conn) {
+  const [rows] = await conn.query(
+    `SELECT e.id_employees, e.first_name, e.second_name, e.patronymic, e.position,
+            p.name AS position_name, e.is_active
+     FROM employees e
+     LEFT JOIN \`position\` p ON e.position = p.id`
   );
   return rows;
 }
@@ -20,9 +32,9 @@ async function fetchAllEmployeesLegacy(conn) {
   const [rows] = await conn.query(
     `SELECT e.id_employees, e.first_name, e.second_name, e.patronymic,
       DATE_FORMAT(e.date_of_birth, '%Y-%m-%d') AS date_of_birth, p.name AS position,
-      e.contact, e.size, e.education, e.schedule, e.gender
+      e.contact, e.size, e.education, e.gender
      FROM employees e
-     INNER JOIN position p ON e.position = p.id
+     INNER JOIN \`position\` p ON e.position = p.id
      WHERE e.is_active = 1`
   );
   return rows;
@@ -73,9 +85,9 @@ async function fetchEmployeeById(conn, id) {
     `SELECT e.id_employees, e.first_name, e.second_name, e.patronymic,
             DATE_FORMAT(e.date_of_birth, '%Y-%m-%d') AS date_of_birth,
             e.position, p.name AS position_name, e.contact, e.size, e.education,
-            e.schedule, e.gender, e.KPI, e.is_active
+            e.gender, e.KPI, e.is_active
      FROM employees e
-     LEFT JOIN position p ON e.position = p.id
+     LEFT JOIN \`position\` p ON e.position = p.id
      WHERE e.id_employees = ?`,
     [id]
   );
@@ -105,43 +117,61 @@ async function insertAssignToEvent(conn, eventId, employeeId) {
   );
 }
 
-async function updateKpi(conn, id, kpi) {
-  const [r] = await conn.query('UPDATE employees SET KPI = ? WHERE id_employees = ?', [kpi, id]);
+const EMPLOYEE_SINGLE_FIELD = new Set(['KPI', 'contact', 'size']);
+
+/** @param { import('mysql2/promise').PoolConnection } conn */
+async function updateEmployeeSingleField(conn, id, column, value) {
+  if (!EMPLOYEE_SINGLE_FIELD.has(column)) throw new Error(`Invalid column: ${column}`);
+  const [r] = await conn.query(`UPDATE employees SET \`${column}\` = ? WHERE id_employees = ?`, [value, id]);
   return r.affectedRows;
 }
 
-async function updateContact(conn, id, contact) {
-  const [r] = await conn.query('UPDATE employees SET contact = ? WHERE id_employees = ?', [contact, id]);
-  return r.affectedRows;
+/** 1 — активен по умолчанию при создании (в БД DEFAULT 0). См. API: опциональное поле is_active. */
+function isActiveForInsert(body) {
+  if (body == null) return 1;
+  const v = body.is_active;
+  if (v === undefined || v === null || v === '') return 1;
+  if (v === false || v === 0 || v === '0' || v === 'false') return 0;
+  return 1;
 }
 
-async function updateSize(conn, id, size) {
-  const [r] = await conn.query('UPDATE employees SET size = ? WHERE id_employees = ?', [size, id]);
-  return r.affectedRows;
+function patronymicOrNull(data) {
+  if (data == null || data.patronymic == null) return null;
+  const s = String(data.patronymic).trim();
+  return s === '' ? null : s;
+}
+
+/**
+ * В БД колонка gender хранит 1 символ: "м" или "ж".
+ * Принимаем разные варианты с фронта: "Мужской/Женский", "male/female", "m/f".
+ */
+function normalizeGenderOrNull(v) {
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (s === '') return null;
+  const low = s.toLowerCase();
+  if (low === 'м' || low === 'm' || low === 'male' || low === 'мужской') return 'м';
+  if (low === 'ж' || low === 'f' || low === 'female' || low === 'женский') return 'ж';
+  return s.length > 1 ? null : low;
 }
 
 /** add_employee: insert employees + profile */
 async function insertEmployee(conn, data) {
+  const active = isActiveForInsert(data);
+  const pat = patronymicOrNull(data);
+  const gender = normalizeGenderOrNull(data.gender);
   const [ins] = await conn.query(
-    `INSERT INTO employees (first_name, second_name, patronymic, date_of_birth, position, contact, size, education, schedule, gender, KPI)
+    `INSERT INTO employees (first_name, second_name, patronymic, date_of_birth, \`position\`, contact, size, education, gender, KPI, is_active)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [data.first_name, data.second_name, data.patronymic, data.date_of_birth, data.position, data.contact || null, data.size || null, data.education || null, data.schedule || null, data.gender || null, data.KPI || null]
+    [data.first_name, data.second_name, pat, data.date_of_birth, data.position, data.contact || null, data.size || null, data.education || null, gender, data.KPI || null, active]
   );
   const employeeId = ins.insertId;
+  const hash = await bcrypt.hash(data.password, 12);
   await conn.query(
-    'INSERT INTO profile (employee_id, login, password, access_level_id) VALUES (?, ?, ?, ?)',
-    [employeeId, data.login, data.password, data.access_level_id]
+    'INSERT INTO profile (employee_id, login, password_hash, access_level_id) VALUES (?, ?, ?, ?)',
+    [employeeId, data.login, hash, data.access_level_id]
   );
   return employeeId;
-}
-
-
-function sendError(res, status, error) {
-  res.status(status).json({ success: false, error });
-}
-
-function sendSuccess(res, data, status = 200) {
-  res.status(status).json({ success: true, data });
 }
 
 exports.getAllEmployees = async (req, res) => {
@@ -151,6 +181,16 @@ exports.getAllEmployees = async (req, res) => {
   } catch (err) {
     console.error('Ошибка получения сотрудников:', err);
     sendError(res, 500, 'Не удалось получить список сотрудников. Попробуйте позже.');
+  }
+};
+
+exports.getAllWithInactive = async (req, res) => {
+  try {
+    const rows = await withConnection(fetchAllEmployeesIncludingInactive);
+    sendSuccess(res, rows);
+  } catch (err) {
+    console.error('getAllWithInactive:', err);
+    sendError(res, 500, 'Не удалось получить список сотрудников.');
   }
 };
 
@@ -218,7 +258,7 @@ exports.setKpi = async (req, res) => {
   if (id == null) return sendError(res, 400, 'Нужен id.');
   const KPI = req.body?.KPI != null ? String(req.body.KPI) : '';
   try {
-    const affected = await withConnection((conn) => updateKpi(conn, id, KPI));
+    const affected = await withConnection((conn) => updateEmployeeSingleField(conn, id, 'KPI', KPI));
     if (affected === 0) return sendError(res, 404, 'Сотрудник не найден.');
     sendSuccess(res, { ok: true });
   } catch (err) {
@@ -233,7 +273,7 @@ exports.updateContact = async (req, res) => {
   if (id == null) return sendError(res, 400, 'Нужен id.');
   const contact = req.body?.contact != null ? String(req.body.contact) : null;
   try {
-    const affected = await withConnection((conn) => updateContact(conn, id, contact));
+    const affected = await withConnection((conn) => updateEmployeeSingleField(conn, id, 'contact', contact));
     if (affected === 0) return sendError(res, 404, 'Сотрудник не найден.');
     sendSuccess(res, { ok: true });
   } catch (err) {
@@ -248,7 +288,7 @@ exports.updateSize = async (req, res) => {
   if (id == null) return sendError(res, 400, 'Нужен id.');
   const size = req.body?.size != null ? String(req.body.size) : null;
   try {
-    const affected = await withConnection((conn) => updateSize(conn, id, size));
+    const affected = await withConnection((conn) => updateEmployeeSingleField(conn, id, 'size', size));
     if (affected === 0) return sendError(res, 404, 'Сотрудник не найден.');
     sendSuccess(res, { ok: true });
   } catch (err) {
@@ -257,9 +297,50 @@ exports.updateSize = async (req, res) => {
   }
 };
 
-/** POST body: first_name, second_name, patronymic, date_of_birth, position, contact?, size?, education?, schedule?, gender?, KPI?, login, password, access_level_id */
+/** PUT /api/employees/:id — обновление всех данных сотрудника */
+exports.updateEmployee = async (req, res) => {
+  const id = parsePositiveId(req.params.id);
+  if (id == null) return sendError(res, 400, 'Некорректный id.');
+  const keys = ['first_name', 'second_name', 'date_of_birth'];
+  const check = requireBodyKeys(req.body, keys);
+  if (!check.valid) return sendError(res, 400, check.message);
+  const b = req.body;
+  if (!String(b.first_name || '').trim()) return sendError(res, 400, 'Укажите first_name.');
+  if (!String(b.second_name || '').trim()) return sendError(res, 400, 'Укажите second_name.');
+  const position = optionalPositiveId(b.position);
+  if (b.position !== '' && b.position != null && b.position !== undefined && position == null) {
+    return sendError(res, 400, 'Некорректный position.');
+  }
+  const isActive = b.is_active !== undefined ? (b.is_active ? 1 : 0) : undefined;
+  const gender = normalizeGenderOrNull(b.gender);
+  const sql = `UPDATE employees SET
+    first_name = ?, second_name = ?, patronymic = ?,
+    date_of_birth = ?, \`position\` = ?, contact = ?,
+    size = ?, education = ?,
+    gender = ?, KPI = ?${isActive !== undefined ? ', is_active = ?' : ''}
+    WHERE id_employees = ?`;
+  const params = [
+    b.first_name, b.second_name, b.patronymic || null,
+    dateOrNull(b.date_of_birth), position, b.contact || null,
+    b.size || null, b.education || null,
+    gender, b.KPI || null,
+  ];
+  if (isActive !== undefined) params.push(isActive);
+  params.push(id);
+  try {
+    const [r] = await withConnection((conn) => conn.query(sql, params));
+    if (r.affectedRows === 0) return sendError(res, 404, 'Сотрудник не найден.');
+    sendSuccess(res, { ok: true });
+  } catch (err) {
+    if (err.code === 'ER_NO_REFERENCED_ROW_2') return sendError(res, 400, 'Указанная должность не найдена.');
+    console.error('updateEmployee:', err);
+    sendError(res, 500, 'Не удалось обновить сотрудника.');
+  }
+};
+
+/** POST body: first_name, second_name, date_of_birth, position, login, password, access_level_id; опц.: patronymic, contact, … */
 exports.addEmployee = async (req, res) => {
-  const keys = ['first_name', 'second_name', 'patronymic', 'date_of_birth', 'position', 'login', 'password', 'access_level_id'];
+  const keys = ['first_name', 'second_name', 'date_of_birth', 'position', 'login', 'password', 'access_level_id'];
   const check = requireBodyKeys(req.body, keys);
   if (!check.valid) return sendError(res, 400, check.message);
   const pos = parsePositiveId(req.body.position);
@@ -269,21 +350,36 @@ exports.addEmployee = async (req, res) => {
     const id = await withConnection((conn) => insertEmployee(conn, req.body));
     sendSuccess(res, { id }, 201);
   } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      return sendError(res, 409, 'Логин уже занят. Выберите другой.');
+    }
     console.error('addEmployee:', err);
     sendError(res, 500, 'Не удалось добавить сотрудника.');
   }
 };
 
+/** DELETE /api/employees/:id */
+exports.deleteEmployee = async (req, res) => {
+  const id = parsePositiveId(req.params.id);
+  if (id == null) return sendError(res, 400, 'Некорректный id.');
+  try {
+    const [r] = await withConnection((conn) =>
+      conn.query('DELETE FROM employees WHERE id_employees = ?', [id])
+    );
+    if (r.affectedRows === 0) return sendError(res, 404, 'Сотрудник не найден.');
+    sendSuccess(res, { ok: true });
+  } catch (err) {
+    console.error('deleteEmployee:', err);
+    sendError(res, 500, 'Не удалось удалить сотрудника.');
+  }
+};
+
 exports.getById = async (req, res) => {
   const id = parsePositiveId(req.params.id);
-  if (id == null) {
-    return res.status(400).json({ success: false, error: 'Некорректный id сотрудника.' });
-  }
+  if (id == null) return sendError(res, 400, 'Некорректный id сотрудника.');
   try {
     const row = await withConnection((conn) => fetchEmployeeById(conn, id));
-    if (!row) {
-      return res.status(404).json({ success: false, error: 'Сотрудник не найден.' });
-    }
+    if (!row) return sendError(res, 404, 'Сотрудник не найден.');
     sendSuccess(res, row);
   } catch (err) {
     console.error('Ошибка получения сотрудника:', err);
@@ -304,26 +400,21 @@ exports.getSchedule = async (req, res) => {
 /** POST body: { event_id, employee_id } — назначить сотрудника на мероприятие */
 exports.assignToEvent = async (req, res) => {
   const bodyCheck = requireBodyKeys(req.body, ['event_id', 'employee_id']);
-  if (!bodyCheck.valid) {
-    return res.status(400).json({ success: false, message: bodyCheck.message });
-  }
+  if (!bodyCheck.valid) return sendError(res, 400, bodyCheck.message);
   const eventId = parsePositiveId(req.body.event_id);
   const employeeId = parsePositiveId(req.body.employee_id);
   if (eventId == null || employeeId == null) {
-    return res.status(400).json({
-      success: false,
-      message: 'event_id и employee_id должны быть положительными числами.'
-    });
+    return sendError(res, 400, 'event_id и employee_id должны быть положительными числами.');
   }
   try {
     await withConnection((conn) => insertAssignToEvent(conn, eventId, employeeId));
-    res.status(201).json({ success: true, message: 'Сотрудник назначен на мероприятие.' });
+    sendSuccess(res, { message: 'Сотрудник назначен на мероприятие.' }, 201);
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ success: false, error: 'Сотрудник уже назначен на это мероприятие.' });
+      return sendError(res, 409, 'Сотрудник уже назначен на это мероприятие.');
     }
     if (err.code === 'ER_NO_REFERENCED_ROW_2' || err.code === 'ER_NO_REFERENCED_ROW') {
-      return res.status(400).json({ success: false, error: 'Указанное мероприятие или сотрудник не найдены.' });
+      return sendError(res, 400, 'Указанное мероприятие или сотрудник не найдены.');
     }
     console.error('Ошибка назначения на мероприятие:', err);
     sendError(res, 500, 'Не удалось назначить сотрудника на мероприятие.');

@@ -48,6 +48,7 @@ describe('Auth Router', () => {
       .send({})
       .expect(400);
 
+    expect(response.body.success).toBe(false);
     expect(response.body.error).toBe('Введите логин и пароль');
     expect(mockQuery).toHaveBeenCalledTimes(0); // Нет вызовов DB
   });
@@ -60,16 +61,17 @@ describe('Auth Router', () => {
       .send({ login: 'unknown', password: '12345' })
       .expect(401);
 
+    expect(response.body.success).toBe(false);
     expect(response.body.error).toBe('Неверный логин или пароль');
     expect(mockQuery).toHaveBeenCalledTimes(1);
     expect(mockQuery).toHaveBeenCalledWith(
-      expect.stringContaining('SELECT id, password_hash, access_level_id FROM profile WHERE login = ?'),
+      expect.stringContaining('SELECT id, employee_id, login, password_hash, access_level_id FROM profile WHERE login = ?'),
       ['unknown']
     );
   });
 
   it('returns 401 when password is incorrect', async () => {
-    const fakeUser = { id: 1, password_hash: 'hash', access_level_id: 1 };
+    const fakeUser = { id: 1, employee_id: 15, login: 'SophyaN', password_hash: 'hash', access_level_id: 1 };
     mockQuery.mockResolvedValueOnce([ [fakeUser], [] ]); // SELECT profile
 
     bcrypt.compare.mockResolvedValueOnce(false);
@@ -79,6 +81,7 @@ describe('Auth Router', () => {
       .send({ login: 'SophyaN', password: 'wrong' })
       .expect(401);
 
+    expect(response.body.success).toBe(false);
     expect(response.body.error).toBe('Неверный логин или пароль');
     expect(mockQuery).toHaveBeenCalledTimes(1);
     expect(bcrypt.compare).toHaveBeenCalledTimes(1);
@@ -86,7 +89,7 @@ describe('Auth Router', () => {
   });
 
   it('successfully logs in and returns tokens', async () => {
-    const fakeUser = { id: 1, password_hash: 'hash', access_level_id: 1 };
+    const fakeUser = { id: 1, employee_id: 15, login: 'SophyaN', password_hash: 'hash', access_level_id: 1 };
     mockQuery
       .mockResolvedValueOnce([ [fakeUser], [] ]) // SELECT profile
       .mockResolvedValueOnce([ { insertId: 999, affectedRows: 1 }, [] ]); // INSERT refresh_tokens
@@ -101,10 +104,14 @@ describe('Auth Router', () => {
       .expect(200);
 
     expect(response.body.success).toBe(true);
-    expect(response.body.accessToken).toBe('fake-access-token');
-    expect(response.body.refreshToken).toBe('fake-refresh-token');
-    expect(response.body.user).toEqual({
-      id: 1,
+    expect(response.body.data.accessToken).toBe('fake-access-token');
+    expect(response.body.data.refreshToken).toBe('fake-refresh-token');
+    expect(response.body.data.user).toEqual({
+      id: 15,
+      employee_id: 15,
+      id_employees: 15,
+      profile_id: 1,
+      login: 'SophyaN',
       accessLevel: 1
     });
     expect(response.headers['set-cookie'][0]).toContain('access_token=fake-access-token'); // Проверка cookie
@@ -119,6 +126,7 @@ describe('Auth Router', () => {
       .send({})
       .expect(401);
 
+    expect(response.body.success).toBe(false);
     expect(response.body.error).toBe('Требуется refresh-токен');
     expect(mockQuery).toHaveBeenCalledTimes(0);
   });
@@ -133,6 +141,7 @@ describe('Auth Router', () => {
       .send({ refreshToken: 'invalid' })
       .expect(401);
 
+    expect(response.body.success).toBe(false);
     expect(response.body.error).toBe('Недействительный refresh-токен');
     expect(mockQuery).toHaveBeenCalledTimes(0); // Не доходит до DB
     expect(jwt.verify).toHaveBeenCalledTimes(1);
@@ -143,7 +152,7 @@ describe('Auth Router', () => {
 
     mockQuery
       .mockResolvedValueOnce([ [{ profile_id: 1, token: 'valid-refresh', expires_at: '2026-01-01 00:00:00', revoked_at: null }], [] ]) // SELECT refresh_tokens (полный объект для реализма)
-      .mockResolvedValueOnce([ [{ id: 1, access_level_id: 1 }], [] ]); // SELECT profile
+      .mockResolvedValueOnce([ [{ id: 1, employee_id: 15, login: 'SophyaN', access_level_id: 1 }], [] ]); // SELECT profile
 
     jwt.sign.mockReturnValueOnce('new-fake-access-token');
 
@@ -153,7 +162,14 @@ describe('Auth Router', () => {
       .expect(200);
 
     expect(response.body.success).toBe(true);
-    expect(response.body.accessToken).toBe('new-fake-access-token');
+    expect(response.body.data.accessToken).toBe('new-fake-access-token');
+    expect(response.body.data.user).toMatchObject({
+      id: 15,
+      employee_id: 15,
+      profile_id: 1,
+      login: 'SophyaN',
+      accessLevel: 1
+    });
     expect(response.headers['set-cookie'][0]).toContain('access_token=new-fake-access-token'); // Проверка cookie
     expect(mockQuery).toHaveBeenCalledTimes(2);
     expect(jwt.verify).toHaveBeenCalledTimes(1);
@@ -169,6 +185,7 @@ describe('Auth Router', () => {
       .expect(200);
 
     expect(response.body.success).toBe(true);
+    expect(response.body.data).toMatchObject({ ok: true });
     expect(response.headers['set-cookie'][0]).toContain('access_token=;'); // Clear cookie
     expect(mockQuery).toHaveBeenCalledTimes(1);
   });
@@ -180,6 +197,7 @@ describe('Auth Router', () => {
       .expect(200);
 
     expect(response.body.success).toBe(true);
+    expect(response.body.data).toMatchObject({ ok: true });
     expect(response.headers['set-cookie'][0]).toContain('access_token=;');
     expect(mockQuery).toHaveBeenCalledTimes(0);
   });

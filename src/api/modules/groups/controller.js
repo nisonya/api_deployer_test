@@ -1,5 +1,12 @@
 const { withConnection } = require('../../helpers/db');
 const { parsePositiveId } = require('../../helpers/validation');
+const { sendSuccess, sendError } = require('../../helpers/http');
+const ADMIN_ACCESS_LEVELS = [1, 4, 6];
+
+function hasGroupManageAccess(req) {
+  const level = req && req.user ? Number(req.user.accessLevel) : NaN;
+  return !isNaN(level) && ADMIN_ACCESS_LEVELS.indexOf(level) >= 0;
+}
 
 /** Uses view_schedule: groups taught by teacher t */
 async function fetchGroupsByTeacher(conn, teacherId) {
@@ -36,6 +43,21 @@ async function fetchListGroup(conn) {
   return rows;
 }
 
+async function addGroupRow(conn, name) {
+  const [r] = await conn.query('INSERT INTO `groups` (name) VALUES (?)', [name]);
+  return r.insertId;
+}
+
+async function updateGroupRow(conn, id, name) {
+  const [r] = await conn.query('UPDATE `groups` SET name = ? WHERE idGroups = ?', [name, id]);
+  return r.affectedRows;
+}
+
+async function deleteGroupRow(conn, id) {
+  const [r] = await conn.query('DELETE FROM `groups` WHERE idGroups = ?', [id]);
+  return r.affectedRows;
+}
+
 const PIXEL_COLUMNS = [
   'part_of_comp', 'make_content', 'invite_friend', 'clean_kvantum', 'filled_project_card_on_time',
   'finished_project_with_product', 'regional_competition', 'interregional_competition', 'all_russian_competition',
@@ -54,14 +76,6 @@ async function updatePixelsForStudent(conn, studentId, fields) {
     values
   );
   return r.affectedRows;
-}
-
-function sendSuccess(res, data, status = 200) {
-  res.status(status).json({ success: true, data });
-}
-
-function sendError(res, status, error) {
-  res.status(status).json({ success: false, error });
 }
 
 exports.getGroupsByTeacher = async (req, res) => {
@@ -105,6 +119,54 @@ exports.getList = async (req, res) => {
   } catch (err) {
     console.error('getList:', err);
     sendError(res, 500, 'Не удалось получить список групп.');
+  }
+};
+
+exports.addGroup = async (req, res) => {
+  if (!hasGroupManageAccess(req)) return sendError(res, 403, 'Недостаточно прав для изменения групп.');
+  const name = (req.body?.name || '').trim();
+  if (!name) return sendError(res, 400, 'Укажите name (название группы).');
+  try {
+    const id = await withConnection((conn) => addGroupRow(conn, name));
+    sendSuccess(res, { id }, 201);
+  } catch (err) {
+    if (err && err.code === 'ER_DUP_ENTRY') return sendError(res, 409, 'Группа с таким названием уже существует.');
+    console.error('addGroup:', err);
+    sendError(res, 500, 'Не удалось добавить группу.');
+  }
+};
+
+exports.updateGroup = async (req, res) => {
+  if (!hasGroupManageAccess(req)) return sendError(res, 403, 'Недостаточно прав для изменения групп.');
+  const id = parsePositiveId(req.params.id);
+  if (id == null) return sendError(res, 400, 'Некорректный id группы.');
+  const name = (req.body?.name || '').trim();
+  if (!name) return sendError(res, 400, 'Укажите name (название группы).');
+  try {
+    const affected = await withConnection((conn) => updateGroupRow(conn, id, name));
+    if (affected === 0) return sendError(res, 404, 'Группа не найдена.');
+    sendSuccess(res, { ok: true });
+  } catch (err) {
+    if (err && err.code === 'ER_DUP_ENTRY') return sendError(res, 409, 'Группа с таким названием уже существует.');
+    console.error('updateGroup:', err);
+    sendError(res, 500, 'Не удалось обновить группу.');
+  }
+};
+
+exports.deleteGroup = async (req, res) => {
+  if (!hasGroupManageAccess(req)) return sendError(res, 403, 'Недостаточно прав для изменения групп.');
+  const id = parsePositiveId(req.params.id);
+  if (id == null) return sendError(res, 400, 'Некорректный id группы.');
+  try {
+    const affected = await withConnection((conn) => deleteGroupRow(conn, id));
+    if (affected === 0) return sendError(res, 404, 'Группа не найдена.');
+    sendSuccess(res, { ok: true });
+  } catch (err) {
+    if (err && err.code === 'ER_ROW_IS_REFERENCED_2') {
+      return sendError(res, 409, 'Нельзя удалить группу: есть связанные записи (расписание или ученики).');
+    }
+    console.error('deleteGroup:', err);
+    sendError(res, 500, 'Не удалось удалить группу.');
   }
 };
 

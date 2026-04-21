@@ -1,9 +1,10 @@
 const { registerHandlers } = require('../../src/main/ipcHandlers');
 const { getApiServer, setApiServer } = require('../../src/main/state');
 const { startApi, stopApi } = require('../../src/api/app');
-const { getDbConfig, setDbConfig, updateApiPort } = require('../../src/common/envLoader');
+const { getDbConfig, setDbConfig, updateApiPort, validateConfigCompleteForServer } = require('../../src/common/envLoader');
 const { getPool } = require('../../src/db/connection');
 const { createSetupWindow, createBackupWindow } = require('../../src/main/windows');
+const { markSetupDone } = require('../../src/main/setupMarker');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -31,6 +32,7 @@ jest.mock('../../src/common/envLoader', () => ({
   getDbConfig: jest.fn(),
   setDbConfig: jest.fn(),
   updateApiPort: jest.fn(),
+  validateConfigCompleteForServer: jest.fn(() => ({ ok: true })),
 }));
 
 jest.mock('../../src/db/connection', () => ({
@@ -45,6 +47,10 @@ jest.mock('../../src/main/state', () => ({
 jest.mock('../../src/main/windows', () => ({
   createSetupWindow: jest.fn(),
   createBackupWindow: jest.fn(),
+}));
+
+jest.mock('../../src/main/setupMarker', () => ({
+  markSetupDone: jest.fn(),
 }));
 
 // Мокаем mysql2/promise
@@ -69,6 +75,7 @@ describe('ipcHandlers', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    validateConfigCompleteForServer.mockReturnValue({ ok: true });
     mainWindowMock = { id: 1 };
     handlersMap = {};
 
@@ -106,6 +113,7 @@ describe('ipcHandlers', () => {
 
     it('успешный запуск с дефолтным портом 3000', async () => {
       getApiServer.mockReturnValue(null);
+      validateConfigCompleteForServer.mockReturnValue({ ok: true });
       getDbConfig.mockResolvedValue(null); // нет конфига → порт 3000
       const fakeServer = { close: jest.fn() };
       startApi.mockResolvedValue(fakeServer);
@@ -115,10 +123,12 @@ describe('ipcHandlers', () => {
       expect(result).toEqual({ success: true, message: 'API is running' });
       expect(startApi).toHaveBeenCalledWith(3000);
       expect(setApiServer).toHaveBeenCalledWith(fakeServer);
+      expect(markSetupDone).toHaveBeenCalledTimes(1);
     });
 
     it('успешный запуск с портом из конфига', async () => {
       getApiServer.mockReturnValue(null);
+      validateConfigCompleteForServer.mockReturnValue({ ok: true });
       getDbConfig.mockResolvedValue({ apiPort: 8080 });
       const fakeServer = { close: jest.fn() };
       startApi.mockResolvedValue(fakeServer);
@@ -128,16 +138,28 @@ describe('ipcHandlers', () => {
       expect(result).toEqual({ success: true, message: 'API is running' });
       expect(startApi).toHaveBeenCalledWith(8080);
       expect(setApiServer).toHaveBeenCalledWith(fakeServer);
+      expect(markSetupDone).toHaveBeenCalledTimes(1);
+    });
+
+    it('не запускает API при неполной конфигурации', async () => {
+      getApiServer.mockReturnValue(null);
+      validateConfigCompleteForServer.mockReturnValue({ ok: false, message: 'Нет каталога документов' });
+      const result = await handlersMap['start-api']();
+      expect(result).toEqual({ success: false, message: 'Нет каталога документов' });
+      expect(startApi).not.toHaveBeenCalled();
+      expect(markSetupDone).not.toHaveBeenCalled();
     });
 
     it('ошибка при запуске → не сохраняет сервер', async () => {
       getApiServer.mockReturnValue(null);
+      validateConfigCompleteForServer.mockReturnValue({ ok: true });
       startApi.mockRejectedValue(new Error('Address already in use'));
 
       const result = await handlersMap['start-api']();
 
       expect(result).toEqual({ success: false, message: 'Address already in use' });
       expect(setApiServer).not.toHaveBeenCalled();
+      expect(markSetupDone).not.toHaveBeenCalled();
     });
   });
 
@@ -237,6 +259,8 @@ describe('ipcHandlers', () => {
         password: 'verysecret',
         database: 'kvant2025',
         apiPort: 5000,
+        documentsRootOrg: '/data/org',
+        documentsRootPart: '/data/part',
       });
 
       const result = await handlersMap['get-db-config']();
@@ -247,6 +271,8 @@ describe('ipcHandlers', () => {
         user: 'app',
         database: 'kvant2025',
         apiPort: 5000,
+        documentsRootOrg: '/data/org',
+        documentsRootPart: '/data/part',
       });
       expect(result.password).toBeUndefined();
     });
@@ -264,6 +290,7 @@ describe('ipcHandlers', () => {
       const result = await handlersMap['save-db-config'](null, config);
       expect(result).toEqual({ success: true });
       expect(setDbConfig).toHaveBeenCalledWith(config);
+      expect(markSetupDone).toHaveBeenCalledTimes(1);
     });
   });
 

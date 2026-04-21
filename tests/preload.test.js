@@ -39,6 +39,8 @@ describe('preload.js', () => {
       'importSeed',
       'restartApp',
       'getDbConfig',
+      'getConfigReadiness',
+      'selectDirectory',
       'updateApiPort',
       'onImportProgress',
       'onExportProgress',

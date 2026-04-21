@@ -7,7 +7,7 @@ const authMiddleware = async (req, res, next) => {
   const token = req.cookies.access_token || req.headers.authorization?.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: 'Токен отсутствует' });
+    return res.status(401).json({ success: false, error: 'Токен отсутствует' });
   }
 
   try {
@@ -24,7 +24,7 @@ const authMiddleware = async (req, res, next) => {
     );
 
     if (rows.length === 0) {
-      return res.status(401).json({ error: 'Пользователь не найден' });
+      return res.status(401).json({ success: false, error: 'Пользователь не найден' });
     }
 
     const user = rows[0];
@@ -36,7 +36,7 @@ const authMiddleware = async (req, res, next) => {
     next();
   } catch (err) {
     console.error('Ошибка проверки токена:', err.message);
-    return res.status(401).json({ error: 'Недействительный или просроченный токен' });
+    return res.status(401).json({ success: false, error: 'Недействительный или просроченный токен' });
   }
 };
 

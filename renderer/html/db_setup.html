@@ -56,9 +56,24 @@
         <form id="apiForm">
           <div class="form-group">
             <label for="apiPort">Порт API</label>
-            <input type="number" id="apiPort" value="3000" min="0" max="65535" required>
+            <input type="number" id="apiPort" value="3000" min="1" max="65535" required>
           </div>
-          <button type="submit" class="button" id="saveApiBtn">Сохранить порт API</button>
+          <div class="form-group">
+            <label for="documentsRootOrg">Каталог документов мероприятий организации</label>
+            <div class="input-with-btn">
+              <input type="text" id="documentsRootOrg" placeholder="Путь к корневой папке" autocomplete="off">
+              <button type="button" class="button button-secondary" id="browseDocumentsRootOrg">Обзор…</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="documentsRootPart">Каталог документов мероприятий участия</label>
+            <div class="input-with-btn">
+              <input type="text" id="documentsRootPart" placeholder="Путь к корневой папке" autocomplete="off">
+              <button type="button" class="button button-secondary" id="browseDocumentsRootPart">Обзор…</button>
+            </div>
+          </div>
+          <div class="message" id="apiMessage"></div>
+          <button type="submit" class="button" id="saveApiBtn">Сохранить настройки API</button>
         </form>
       </div>
     </div>
